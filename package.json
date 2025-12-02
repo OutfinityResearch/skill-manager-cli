@@ -1,0 +1,40 @@
+{
+    "name": "@outfinityresearch/skill-manager",
+    "version": "0.1.0",
+    "description": "CLI agent for managing, generating, and testing skill definition files in .AchillesSkills directories.",
+    "license": "MIT",
+    "type": "module",
+    "main": "src/index.mjs",
+    "bin": {
+        "skill-manager": "./bin/skill-manager.mjs"
+    },
+    "exports": {
+        ".": "./src/index.mjs",
+        "./SkillManagerCli": "./src/SkillManagerCli.mjs"
+    },
+    "files": [
+        "src",
+        "bin"
+    ],
+    "scripts": {
+        "test": "node --test tests/*.test.mjs",
+        "test:all": "node tests/run-all.mjs"
+    },
+    "dependencies": {
+        "achilles-agent-lib": "file:../AchillesAgentLib"
+    },
+    "devDependencies": {},
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/outfinityresearch/skill-manager.git"
+    },
+    "keywords": [
+        "achilles",
+        "skill-manager",
+        "agent",
+        "cli"
+    ]
+}
