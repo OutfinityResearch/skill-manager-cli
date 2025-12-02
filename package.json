@@ -1,5 +1,5 @@
 {
-    "name": "@outfinityresearch/skill-manager",
+    "name": "@outfinityresearch/skill-manager-cli",
     "version": "0.1.0",
     "description": "CLI agent for managing, generating, and testing skill definition files in .AchillesSkills directories.",
     "license": "MIT",
@@ -29,7 +29,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/outfinityresearch/skill-manager.git"
+        "url": "https://github.com/outfinityresearch/skill-manager-cli.git"
     },
     "keywords": [
         "achilles",
