@@ -1,9 +1,10 @@
 /**
- * REPLSession - Manages the interactive REPL session for SkillManagerCli.
+ * REPLSession - Manages the interactive REPL session for RecursiveSkilledAgent.
  *
  * Extracted from SkillManagerCli to reduce file size and improve modularity.
  */
 
+import path from 'node:path';
 import readline from 'node:readline';
 import { createSpinner } from './spinner.mjs';
 import { ActionReporter } from 'achilles-agent-lib/utils/ActionReporter.mjs';
@@ -11,6 +12,7 @@ import { showCommandSelector, showSkillSelector, buildCommandList } from './Comm
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
 import { printHelp, showHistory, searchHistory } from './HelpPrinter.mjs';
 import { summarizeResult } from './ResultFormatter.mjs';
+import { HistoryManager } from './HistoryManager.mjs';
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -19,18 +21,43 @@ export class REPLSession {
     /**
      * Create a new REPLSession.
      *
-     * @param {SkillManagerCli} cli - The SkillManagerCli instance
+     * @param {RecursiveSkilledAgent} agent - The RecursiveSkilledAgent instance
      * @param {Object} options - Session options
+     * @param {string} options.workingDir - Working directory path
+     * @param {string} [options.skillsDir] - Skills directory path (defaults to workingDir/.AchillesSkills)
+     * @param {string} [options.builtInSkillsDir] - Built-in skills directory (for filtering user skills)
+     * @param {HistoryManager} [options.historyManager] - Command history manager (created if not provided)
+     * @param {boolean} [options.debug] - Enable debug mode
      */
-    constructor(cli, options = {}) {
-        this.cli = cli;
+    constructor(agent, options = {}) {
+        this.agent = agent;
         this.options = options;
 
-        // Create slash command handler with callbacks to CLI
+        // Configuration
+        this.workingDir = options.workingDir || agent.startDir;
+        this.skillsDir = options.skillsDir || path.join(this.workingDir, '.AchillesSkills');
+        this.builtInSkillsDir = options.builtInSkillsDir || null;
+        this.debug = options.debug || false;
+
+        // History manager
+        this.historyManager = options.historyManager || new HistoryManager({
+            workingDir: this.workingDir,
+        });
+
+        // Context for skill execution
+        this.context = {
+            workingDir: this.workingDir,
+            skillsDir: this.skillsDir,
+            skilledAgent: agent,
+            llmAgent: agent.llmAgent,
+            logger: agent.logger,
+        };
+
+        // Create slash command handler with callbacks
         this.slashHandler = new SlashCommandHandler({
-            executeSkill: (skillName, input, opts) => cli.executeSkill(skillName, input, opts),
-            getUserSkills: () => cli.getUserSkills(),
-            getSkills: () => cli.getSkills(),
+            executeSkill: (skillName, input, opts) => this._executeSkill(skillName, input, opts),
+            getUserSkills: () => this.getUserSkills(),
+            getSkills: () => agent.getSkills(),
         });
 
         // Build command list for interactive selector
@@ -45,22 +72,94 @@ export class REPLSession {
     }
 
     /**
+     * Execute a skill directly
+     * @private
+     */
+    async _executeSkill(skillName, input, opts = {}) {
+        return this.agent.executePrompt(input, {
+            skillName,
+            context: this.context,
+            ...opts,
+        });
+    }
+
+    /**
+     * Get user skills (exclude built-in skills)
+     */
+    getUserSkills() {
+        const skills = this.agent.getSkills();
+        if (!this.builtInSkillsDir) {
+            return skills;
+        }
+        return skills.filter(s => !s.skillDir?.startsWith(this.builtInSkillsDir));
+    }
+
+    /**
+     * Reload skills from disk
+     */
+    reloadSkills() {
+        return this.agent.reloadSkills();
+    }
+
+    /**
+     * Process a prompt through the skill-manager orchestrator
+     */
+    async processPrompt(userPrompt, opts = {}) {
+        const { skillName = 'skill-manager', ...restOptions } = opts;
+
+        let result = await this.agent.executePrompt(userPrompt, {
+            skillName,
+            context: this.context,
+            ...restOptions,
+        });
+
+        // If result is a JSON string, parse it to get the object
+        if (typeof result === 'string') {
+            try {
+                const parsed = JSON.parse(result);
+                if (parsed && (parsed.executions || parsed.type === 'orchestrator')) {
+                    result = parsed;
+                } else {
+                    return result;
+                }
+            } catch {
+                return result;
+            }
+        }
+
+        // In debug mode, show full JSON
+        if (this.debug) {
+            if (result?.result) {
+                return typeof result.result === 'string'
+                    ? result.result
+                    : JSON.stringify(result.result, null, 2);
+            }
+            if (result?.output) {
+                return result.output;
+            }
+            return JSON.stringify(result, null, 2);
+        }
+
+        // Non-debug mode: show summarized output
+        return summarizeResult(result);
+    }
+
+    /**
      * Start the interactive REPL session.
      * @returns {Promise<void>}
      */
     async start() {
-        const cli = this.cli;
-        const userSkills = cli.getUserSkills();
+        const userSkills = this.getUserSkills();
 
         console.log('\n╔══════════════════════════════════════════════════════════╗');
         console.log('║           Skill Manager Agent - Interactive CLI          ║');
         console.log('╚══════════════════════════════════════════════════════════╝\n');
-        console.log(`Working directory: ${cli.workingDir}`);
-        console.log(`Skills directory: ${cli.skillsDir}`);
+        console.log(`Working directory: ${this.workingDir}`);
+        console.log(`Skills directory: ${this.skillsDir}`);
 
         // Show LLM model info
         try {
-            const description = cli.llmAgent.invokerStrategy?.describe?.();
+            const description = this.agent.llmAgent.invokerStrategy?.describe?.();
             if (description) {
                 const orchestratorMode = process.env.ACHILLES_ORCHESTRATOR_MODE || 'fast';
                 const models = orchestratorMode === 'deep' ? description.deepModels : description.fastModels;
@@ -81,8 +180,8 @@ export class REPLSession {
         }
 
         // Show history info
-        if (cli.historyManager.length > 0) {
-            console.log(`Command history: ${cli.historyManager.length} entries (use ↑/↓ to navigate, "history" to view)`);
+        if (this.historyManager.length > 0) {
+            console.log(`Command history: ${this.historyManager.length} entries (use ↑/↓ to navigate, "history" to view)`);
         }
 
         console.log('\nCommands: "exit" to quit, type "/" to see all commands, or type any instruction.\n');
@@ -106,13 +205,13 @@ export class REPLSession {
 
             if (input.toLowerCase() === 'reload') {
                 const spinner = createSpinner('Reloading skills');
-                const count = cli.reloadSkills();
+                const count = this.reloadSkills();
                 spinner.succeed(`Reloaded ${count} skill(s)`);
                 continue;
             }
 
             if (input.toLowerCase() === 'list' || input.toLowerCase() === 'ls') {
-                const skills = cli.getUserSkills();
+                const skills = this.getUserSkills();
                 if (skills.length === 0) {
                     console.log('\nNo user skills found.\n');
                 } else {
@@ -124,9 +223,13 @@ export class REPLSession {
             }
 
             if (input.toLowerCase() === 'list all' || input.toLowerCase() === 'ls -a') {
-                const skills = cli.getSkills();
-                const builtIn = skills.filter(s => s.skillDir?.startsWith(cli.builtInSkillsDir));
-                const user = skills.filter(s => !s.skillDir?.startsWith(cli.builtInSkillsDir));
+                const skills = this.agent.getSkills();
+                const builtIn = this.builtInSkillsDir
+                    ? skills.filter(s => s.skillDir?.startsWith(this.builtInSkillsDir))
+                    : [];
+                const user = this.builtInSkillsDir
+                    ? skills.filter(s => !s.skillDir?.startsWith(this.builtInSkillsDir))
+                    : skills;
 
                 console.log('\nAll skills:');
                 if (user.length > 0) {
@@ -143,20 +246,20 @@ export class REPLSession {
 
             // History commands
             if (input.toLowerCase() === 'history' || input.toLowerCase() === 'hist') {
-                showHistory(cli.historyManager);
+                showHistory(this.historyManager);
                 continue;
             }
 
             if (input.toLowerCase().startsWith('history ') || input.toLowerCase().startsWith('hist ')) {
                 const arg = input.split(/\s+/).slice(1).join(' ');
                 if (arg === 'clear') {
-                    cli.historyManager.clear();
+                    this.historyManager.clear();
                     console.log('\nHistory cleared.\n');
                 } else if (arg.match(/^\d+$/)) {
-                    showHistory(cli.historyManager, parseInt(arg, 10));
+                    showHistory(this.historyManager, parseInt(arg, 10));
                 } else {
                     // Search history
-                    searchHistory(cli.historyManager, arg);
+                    searchHistory(this.historyManager, arg);
                 }
                 continue;
             }
@@ -170,7 +273,7 @@ export class REPLSession {
 
                     try {
                         const result = await this.slashHandler.executeSlashCommand(parsed.command, parsed.args, {
-                            context: cli.context,
+                            context: this.context,
                         });
 
                         if (result.handled) {
@@ -186,7 +289,7 @@ export class REPLSession {
                             }
                             // Save successful slash commands to history
                             if (!result.error) {
-                                cli.historyManager.add(input);
+                                this.historyManager.add(input);
                             }
                         } else {
                             spinner.fail(result.error || `Unknown command: /${parsed.command}`);
@@ -209,8 +312,6 @@ export class REPLSession {
      * @private
      */
     async _processNaturalLanguage(input) {
-        const cli = this.cli;
-
         // Create AbortController for ESC cancellation
         const abortController = new AbortController();
         let wasInterrupted = false;
@@ -218,9 +319,10 @@ export class REPLSession {
         // Create ActionReporter for real-time feedback (Claude Code style)
         const actionReporter = new ActionReporter({
             mode: 'spinner',
+            spinnerFactory: createSpinner,  // Inject spinner implementation
             showInterruptHint: true,
         });
-        cli.skilledAgent.setActionReporter(actionReporter);
+        this.agent.setActionReporter(actionReporter);
 
         // Set up ESC key listener
         const handleKeypress = (key) => {
@@ -239,7 +341,7 @@ export class REPLSession {
         }
 
         // Set up a prompt reader that pauses the reporter during user input
-        cli.skilledAgent.promptReader = async (prompt) => {
+        this.agent.promptReader = async (prompt) => {
             // Pause the action reporter while waiting for user input
             actionReporter.pause();
 
@@ -272,12 +374,12 @@ export class REPLSession {
         actionReporter.thinking();
 
         try {
-            const result = await cli.processPrompt(input, {
+            const result = await this.processPrompt(input, {
                 signal: abortController.signal,
             });
 
             // Show actual model used
-            const lastInvocation = cli.llmAgent.invokerStrategy?.getLastInvocationDetails?.();
+            const lastInvocation = this.agent.llmAgent.invokerStrategy?.getLastInvocationDetails?.();
             const modelInfo = lastInvocation?.model ? ` [${lastInvocation.model}]` : '';
 
             // Complete any remaining actions and show final status
@@ -296,7 +398,7 @@ export class REPLSession {
                 actionReporter.interrupted('Operation cancelled');
                 console.log('');
             } else {
-                const lastInvocation = cli.llmAgent.invokerStrategy?.getLastInvocationDetails?.();
+                const lastInvocation = this.agent.llmAgent.invokerStrategy?.getLastInvocationDetails?.();
                 const modelInfo = lastInvocation?.model ? ` [${lastInvocation.model}]` : '';
                 actionReporter.failAction(error);
                 console.error(`\n${error.message}\n`);
@@ -309,12 +411,12 @@ export class REPLSession {
             }
 
             // Clean up reporter and prompt reader
-            cli.skilledAgent.setActionReporter(null);
-            cli.skilledAgent.promptReader = null;
+            this.agent.setActionReporter(null);
+            this.agent.promptReader = null;
 
             // Save command to history (unless interrupted)
             if (!wasInterrupted) {
-                cli.historyManager.add(input);
+                this.historyManager.add(input);
             }
         }
     }
@@ -337,7 +439,6 @@ export class REPLSession {
      */
     async _promptWithSelector() {
         const self = this;
-        const cli = this.cli;
 
         return new Promise((resolve) => {
             // Set up raw mode to detect "/" key immediately
@@ -358,7 +459,7 @@ export class REPLSession {
             let showingSelector = false;
             let savedBuffer = ''; // Save current input when navigating history
             let historyIndex = -1; // -1 means "new input", 0+ means history index from end
-            const history = cli.historyManager.getAll();
+            const history = self.historyManager.getAll();
 
             // Helper to clear current line and rewrite with new content
             const rewriteLine = (newContent) => {
@@ -432,7 +533,7 @@ export class REPLSession {
                             process.stdout.write(`${selected.name} `);
 
                             // Get list of skills - use user skills only for skill-operating commands
-                            const userSkills = cli.getUserSkills();
+                            const userSkills = self.getUserSkills();
                             if (userSkills.length === 0) {
                                 cleanup();
                                 process.stdout.write('\n');
@@ -616,7 +717,7 @@ export class REPLSession {
                     process.stdout.write(` `);
 
                     // Use user skills only for skill-operating commands
-                    const userSkills = cli.getUserSkills();
+                    const userSkills = self.getUserSkills();
                     if (userSkills.length === 0) {
                         cleanup();
                         process.stdout.write('\n');
@@ -762,8 +863,8 @@ export class REPLSession {
             const rl = readline.createInterface({
                 input: process.stdin,
                 output: process.stdout,
-                history: cli.historyManager.getAll().reverse(),
-                historySize: cli.historyManager.maxEntries,
+                history: this.historyManager.getAll().reverse(),
+                historySize: this.historyManager.maxEntries,
                 terminal: true,
                 completer: (line) => this.slashHandler.getCompletions(line),
             });

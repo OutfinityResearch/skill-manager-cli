@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
-import { SkillManagerCli } from './SkillManagerCli.mjs';
+import { RecursiveSkilledAgent } from 'achilles-agent-lib/RecursiveSkilledAgents';
+import { LLMAgent } from 'achilles-agent-lib/LLMAgents';
 import { HistoryManager } from './HistoryManager.mjs';
 import { CommandSelector, showCommandSelector, showSkillSelector, buildCommandList } from './CommandSelector.mjs';
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
@@ -11,10 +13,17 @@ import { REPLSession } from './REPLSession.mjs';
 import { summarizeResult, formatSlashResult } from './ResultFormatter.mjs';
 import { printHelp as printREPLHelp, showHistory, searchHistory } from './HelpPrinter.mjs';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Path to built-in skills bundled with this module
+const builtInSkillsDir = path.join(__dirname, '.AchillesSkills');
+
 // Re-export classes and functions for library usage
 export {
-    // Main class
-    SkillManagerCli,
+    // Core agent (from achilles-agent-lib)
+    RecursiveSkilledAgent,
+    LLMAgent,
     // REPL components
     REPLSession,
     SlashCommandHandler,
@@ -31,6 +40,8 @@ export {
     printREPLHelp,
     showHistory,
     searchHistory,
+    // Constants
+    builtInSkillsDir,
 };
 
 // CLI entry point when run directly
@@ -77,11 +88,24 @@ async function main() {
         error: (msg) => console.error(`[ERROR] ${msg}`),
     };
 
-    // Initialize CLI
-    const agent = new SkillManagerCli({
-        workingDir,
+    // Ensure user's .AchillesSkills directory exists
+    const skillsDir = path.join(workingDir, '.AchillesSkills');
+    if (!fs.existsSync(skillsDir)) {
+        fs.mkdirSync(skillsDir, { recursive: true });
+        logger.log?.(`Created .AchillesSkills directory at ${skillsDir}`);
+    }
+
+    // Initialize LLM Agent
+    const llmAgent = new LLMAgent({
+        name: 'skill-manager-agent',
+    });
+
+    // Initialize RecursiveSkilledAgent with built-in skills
+    const agent = new RecursiveSkilledAgent({
+        llmAgent,
+        startDir: workingDir,
+        additionalSkillRoots: [builtInSkillsDir],
         logger,
-        debug,
     });
 
     if (prompt) {
@@ -90,7 +114,37 @@ async function main() {
             if (verbose) {
                 console.log(`Processing: "${prompt}"\n`);
             }
-            const result = await agent.processPrompt(prompt, { mode });
+            // Create context for skill execution
+            const context = {
+                workingDir,
+                skillsDir,
+                skilledAgent: agent,
+                llmAgent,
+                logger,
+            };
+
+            let result = await agent.executePrompt(prompt, {
+                skillName: 'skill-manager',
+                context,
+                mode,
+            });
+
+            // Format result
+            if (typeof result === 'string') {
+                try {
+                    const parsed = JSON.parse(result);
+                    if (parsed && (parsed.executions || parsed.type === 'orchestrator')) {
+                        result = debug ? JSON.stringify(parsed, null, 2) : summarizeResult(parsed);
+                    }
+                } catch {
+                    // Not JSON, use as-is
+                }
+            } else if (!debug) {
+                result = summarizeResult(result);
+            } else {
+                result = JSON.stringify(result, null, 2);
+            }
+
             console.log(result);
         } catch (error) {
             console.error('Error:', error.message);
@@ -101,7 +155,13 @@ async function main() {
         }
     } else {
         // REPL mode
-        await agent.startREPL();
+        const session = new REPLSession(agent, {
+            workingDir,
+            skillsDir,
+            builtInSkillsDir,
+            debug,
+        });
+        await session.start();
     }
 }
 
