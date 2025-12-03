@@ -54,6 +54,7 @@ async function main() {
     let verbose = false;
     let debug = false;
     let mode = 'deep';
+    let renderMarkdown = true;
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
@@ -71,6 +72,8 @@ async function main() {
             mode = 'fast';
         } else if (arg === '--deep') {
             mode = 'deep';
+        } else if (arg === '--no-markdown' || arg === '--raw') {
+            renderMarkdown = false;
         } else if (arg === '--version') {
             console.log('skill-manager v3.0.0');
             process.exit(0);
@@ -160,6 +163,7 @@ async function main() {
             skillsDir,
             builtInSkillsDir,
             debug,
+            renderMarkdown,
         });
         await session.start();
     }
@@ -181,6 +185,7 @@ OPTIONS:
   --debug            Show full JSON output (orchestrator plans, executions)
   --fast             Use fast LLM mode (cheaper, quicker)
   --deep             Use deep LLM mode (default, more capable)
+  --no-markdown      Disable markdown rendering in output (use /raw to toggle)
   -h, --help         Show this help message
   --version          Show version
 

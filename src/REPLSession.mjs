@@ -13,6 +13,8 @@ import { SlashCommandHandler } from './SlashCommandHandler.mjs';
 import { printHelp, showHistory, searchHistory } from './HelpPrinter.mjs';
 import { summarizeResult } from './ResultFormatter.mjs';
 import { HistoryManager } from './HistoryManager.mjs';
+import { renderMarkdown } from './MarkdownRenderer.mjs';
+import { LineEditor } from './LineEditor.mjs';
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -69,6 +71,9 @@ export class REPLSession {
 
         // Track current hint for cleanup
         this.currentHintLines = 0;
+
+        // Markdown rendering toggle (default: enabled)
+        this.markdownEnabled = options.renderMarkdown !== false;
     }
 
     /**
@@ -277,12 +282,22 @@ export class REPLSession {
                         });
 
                         if (result.handled) {
-                            if (result.error) {
+                            // Handle /quit and /exit commands
+                            if (result.exitRepl) {
+                                spinner.stop();
+                                console.log('\nGoodbye!\n');
+                                return; // Exit the start() method
+                            }
+                            // Handle /raw toggle command
+                            if (result.toggleMarkdown) {
+                                this.markdownEnabled = !this.markdownEnabled;
+                                spinner.succeed(`Markdown rendering ${this.markdownEnabled ? 'enabled' : 'disabled'}`);
+                            } else if (result.error) {
                                 spinner.fail(result.error);
                             } else if (result.result) {
                                 spinner.succeed(`/${parsed.command} complete`);
                                 console.log('-'.repeat(60));
-                                console.log(result.result);
+                                console.log(this.markdownEnabled ? renderMarkdown(result.result) : result.result);
                                 console.log('-'.repeat(60) + '\n');
                             } else {
                                 spinner.stop();
@@ -391,7 +406,7 @@ export class REPLSession {
             console.log(`✓ Done${modelInfo}${durationInfo}`);
 
             console.log('-'.repeat(60));
-            console.log(result);
+            console.log(this.markdownEnabled ? renderMarkdown(result) : result);
             console.log('-'.repeat(60) + '\n');
         } catch (error) {
             if (wasInterrupted || error.name === 'AbortError') {
@@ -455,21 +470,21 @@ export class REPLSession {
                 return;
             }
 
-            let buffer = '';
+            // LineEditor handles buffer and cursor position
+            const editor = new LineEditor({ prompt: 'SkillManager> ' });
             let showingSelector = false;
             let savedBuffer = ''; // Save current input when navigating history
             let historyIndex = -1; // -1 means "new input", 0+ means history index from end
             const history = self.historyManager.getAll();
 
-            // Helper to clear current line and rewrite with new content
+            // Helper to set buffer content (for history navigation)
             const rewriteLine = (newContent) => {
-                // Move cursor to start of input (after prompt), clear to end, write new content
-                process.stdout.write('\r\x1b[K'); // Clear entire line
-                process.stdout.write('SkillManager> ' + newContent);
-                buffer = newContent;
+                editor.setBuffer(newContent);
+                editor.render();
             };
 
-            process.stdout.write('SkillManager> ');
+            // Initial prompt render
+            editor.render();
 
             process.stdin.setRawMode(true);
             process.stdin.resume();
@@ -493,26 +508,12 @@ export class REPLSession {
                 if (keyStr === '\r' || keyStr === '\n') {
                     cleanup();
                     process.stdout.write('\n');
-                    resolve(buffer);
+                    resolve(editor.getBuffer());
                     return;
                 }
 
-                // Handle Backspace
-                if (keyStr === '\x7f' || keyStr === '\b') {
-                    if (buffer.length > 0) {
-                        // Reset history navigation when user edits
-                        if (historyIndex !== -1) {
-                            historyIndex = -1;
-                            savedBuffer = '';
-                        }
-                        buffer = buffer.slice(0, -1);
-                        process.stdout.write('\b \b');
-                    }
-                    return;
-                }
-
-                // Handle "/" - show interactive selector
-                if (keyStr === '/' && buffer === '') {
+                // Handle "/" - show interactive selector (only when buffer is empty)
+                if (keyStr === '/' && editor.getBuffer() === '') {
                     if (showingSelector) return;
                     showingSelector = true;
 
@@ -622,8 +623,8 @@ export class REPLSession {
                             } else {
                                 // User cancelled skill selection - return to prompt
                                 showingSelector = false;
-                                buffer = '';
-                                process.stdout.write('\rSkillManager> ');
+                                editor.clear();
+                                editor.render();
                                 process.stdin.setRawMode(true);
                                 process.stdin.on('data', handleKey);
                             }
@@ -636,8 +637,8 @@ export class REPLSession {
                     } else {
                         // User cancelled - return to normal prompt
                         showingSelector = false;
-                        buffer = '';
-                        process.stdout.write('SkillManager> ');
+                        editor.clear();
+                        editor.render();
                         process.stdin.setRawMode(true);
                         process.stdin.on('data', handleKey);
                     }
@@ -658,7 +659,7 @@ export class REPLSession {
 
                     if (historyIndex === -1) {
                         // First time pressing up - save current input
-                        savedBuffer = buffer;
+                        savedBuffer = editor.getBuffer();
                     }
 
                     if (historyIndex < history.length - 1) {
@@ -685,15 +686,11 @@ export class REPLSession {
                     return;
                 }
 
-                // Ignore other escape sequences (Left, Right, etc.)
-                if (keyStr.startsWith('\x1b[')) {
-                    return;
-                }
-
                 // Helper to check if buffer is a command needing skill arg
                 const getCommandNeedingSkillArg = () => {
-                    if (!buffer.startsWith('/')) return null;
-                    const parsed = self.slashHandler.parseSlashCommand(buffer);
+                    const buf = editor.getBuffer();
+                    if (!buf.startsWith('/')) return null;
+                    const parsed = self.slashHandler.parseSlashCommand(buf);
                     if (!parsed) return null;
                     const { command, args } = parsed;
                     // Only trigger if no args yet (just the command)
@@ -805,7 +802,7 @@ export class REPLSession {
                     } else {
                         // User cancelled - return to prompt with buffer intact
                         showingSelector = false;
-                        process.stdout.write(`\rSkillManager> ${buffer}`);
+                        editor.render();
                         process.stdin.setRawMode(true);
                         process.stdin.on('data', handleKey);
                     }
@@ -829,22 +826,25 @@ export class REPLSession {
                         await showSkillSelectorForCommand(cmdInfo.command);
                         return;
                     }
-                    // Regular space - add to buffer
-                    buffer += keyStr;
-                    process.stdout.write(keyStr);
-                    return;
+                    // Fall through to LineEditor for regular space
                 }
 
-                // Regular character
-                if (keyStr.length === 1 && keyStr >= ' ') {
-                    // Reset history navigation when user types
+                // Delegate to LineEditor for cursor movement, editing, and character input
+                const action = editor.processKey(keyStr);
+                if (action === 'modified') {
+                    // Reset history navigation when user edits
                     if (historyIndex !== -1) {
                         historyIndex = -1;
                         savedBuffer = '';
                     }
-                    buffer += keyStr;
-                    process.stdout.write(keyStr);
+                    editor.render();
+                    return;
                 }
+                if (action === 'cursor') {
+                    editor.render();
+                    return;
+                }
+                // 'none' or 'unhandled' - ignore
             };
 
             process.stdin.on('data', handleKey);

@@ -165,6 +165,16 @@ export class SlashCommandHandler {
             return { handled: true };
         }
 
+        // Handle /raw - toggle markdown rendering (handled by REPLSession)
+        if (command === 'raw') {
+            return { handled: true, toggleMarkdown: true };
+        }
+
+        // Handle /quit and /exit - exit the REPL (handled by REPLSession)
+        if (command === 'quit' || command === 'exit' || command === 'q') {
+            return { handled: true, exitRepl: true };
+        }
+
         const cmdDef = SlashCommandHandler.COMMANDS[command];
         if (!cmdDef) {
             return {
@@ -249,6 +259,9 @@ export class SlashCommandHandler {
                 // Add built-in commands
                 if ('help'.startsWith(cmdPrefix)) matchingCmds.push('/help');
                 if ('commands'.startsWith(cmdPrefix)) matchingCmds.push('/commands');
+                if ('raw'.startsWith(cmdPrefix)) matchingCmds.push('/raw');
+                if ('quit'.startsWith(cmdPrefix)) matchingCmds.push('/quit');
+                if ('exit'.startsWith(cmdPrefix)) matchingCmds.push('/exit');
 
                 return [matchingCmds, line];
             }
@@ -326,6 +339,16 @@ export class SlashCommandHandler {
             return 'Show available slash commands';
         }
 
+        // Check for /raw command
+        if (command === 'raw') {
+            return 'Toggle raw output (disable markdown rendering)';
+        }
+
+        // Check for /quit and /exit commands
+        if (command === 'quit' || command === 'exit' || command === 'q') {
+            return 'Exit the REPL';
+        }
+
         const cmdDef = SlashCommandHandler.COMMANDS[command];
         if (!cmdDef) {
             // Check for partial matches
@@ -374,6 +397,12 @@ Editing:
 
 Advanced:
   /exec <skill> [input]  Execute any skill directly
+
+Output:
+  /raw                   Toggle markdown rendering on/off
+
+Session:
+  /quit, /exit, /q       Exit the REPL
 
 Help:
   /help, /?              Show this help
