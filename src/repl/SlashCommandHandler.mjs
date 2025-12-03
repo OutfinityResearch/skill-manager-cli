@@ -4,7 +4,7 @@
  * Extracted from SkillManagerCli to reduce file size and improve modularity.
  */
 
-import { formatSlashResult } from './ResultFormatter.mjs';
+import { formatSlashResult } from '../ui/ResultFormatter.mjs';
 
 /**
  * SlashCommandHandler class for managing slash commands in the CLI.

@@ -5,7 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { updateSkillSection } from '../../skillSchemas.mjs';
+import { updateSkillSection } from '../../schemas/skillSchemas.mjs';
 
 /**
  * Check if a .generated.mjs file exists in the skill directory

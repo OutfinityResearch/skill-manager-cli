@@ -4,7 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { detectSkillType, parseSkillSections, loadSpecsContent } from '../../skillSchemas.mjs';
+import { detectSkillType, parseSkillSections, loadSpecsContent } from '../../schemas/skillSchemas.mjs';
 import {
     buildCodeGenPrompt,
     buildIskillCodeGenPrompt,

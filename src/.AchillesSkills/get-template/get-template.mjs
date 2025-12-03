@@ -2,7 +2,7 @@
  * Get Template - Returns a blank template for a skill type
  */
 
-import { SKILL_TYPES, SKILL_TEMPLATES } from '../../skillSchemas.mjs';
+import { SKILL_TYPES, SKILL_TEMPLATES } from '../../schemas/skillSchemas.mjs';
 
 export async function action(recursiveSkilledAgent, prompt) {
     // Parse skill type

@@ -6,12 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { RecursiveSkilledAgent } from 'achilles-agent-lib/RecursiveSkilledAgents';
 import { LLMAgent } from 'achilles-agent-lib/LLMAgents';
-import { HistoryManager } from './HistoryManager.mjs';
-import { CommandSelector, showCommandSelector, showSkillSelector, buildCommandList } from './CommandSelector.mjs';
-import { SlashCommandHandler } from './SlashCommandHandler.mjs';
-import { REPLSession } from './REPLSession.mjs';
-import { summarizeResult, formatSlashResult } from './ResultFormatter.mjs';
-import { printHelp as printREPLHelp, showHistory, searchHistory } from './HelpPrinter.mjs';
+import { HistoryManager } from './repl/HistoryManager.mjs';
+import { CommandSelector, showCommandSelector, showSkillSelector, buildCommandList } from './ui/CommandSelector.mjs';
+import { SlashCommandHandler } from './repl/SlashCommandHandler.mjs';
+import { REPLSession } from './repl/REPLSession.mjs';
+import { summarizeResult, formatSlashResult } from './ui/ResultFormatter.mjs';
+import { printHelp as printREPLHelp, showHistory, searchHistory } from './ui/HelpPrinter.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -127,7 +127,7 @@ async function main() {
             };
 
             let result = await agent.executePrompt(prompt, {
-                skillName: 'skill-manager',
+                skillName: 'skills-orchestrator',
                 context,
                 mode,
             });
@@ -208,7 +208,7 @@ BUILT-IN SKILLS:
   preview-changes    Show diff before applying
   generate-code      Generate .mjs from tskill
   test-code          Test generated code
-  skill-manager      Orchestrator for routing requests
+  skills-orchestrator  Orchestrator for routing requests
   skill-refiner      Iterative improvement loop
 
 SKILL TYPES:

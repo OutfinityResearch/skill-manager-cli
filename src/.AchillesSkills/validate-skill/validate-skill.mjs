@@ -4,7 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { validateSkillContent } from '../../skillSchemas.mjs';
+import { validateSkillContent } from '../../schemas/skillSchemas.mjs';
 
 export async function action(recursiveSkilledAgent, prompt) {
     // Parse skill name
