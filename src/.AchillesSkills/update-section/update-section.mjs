@@ -36,11 +36,6 @@ async function triggerCodeRegeneration(skillName, recursiveSkilledAgent) {
 }
 
 export async function action(recursiveSkilledAgent, prompt) {
-    // Derive skillsDir from agent's startDir
-    const skillsDir = recursiveSkilledAgent?.startDir
-        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
-        : null;
-
     // Parse arguments
     let args;
     if (typeof prompt === 'string') {
@@ -65,27 +60,15 @@ export async function action(recursiveSkilledAgent, prompt) {
         return 'Error: content is required';
     }
 
-    // Find skill file
-    let filePath = null;
+    // Use findSkillFile to locate the skill
+    const skillInfo = recursiveSkilledAgent?.findSkillFile?.(skillName);
 
-    const skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
-    if (skillRecord && skillRecord.filePath) {
-        filePath = skillRecord.filePath;
-    } else if (skillsDir) {
-        const skillDir = path.join(skillsDir, skillName);
-        if (fs.existsSync(skillDir)) {
-            const SKILL_FILES = ['skill.md', 'cskill.md', 'iskill.md', 'oskill.md', 'mskill.md', 'tskill.md'];
-            const files = fs.readdirSync(skillDir);
-            const skillFile = files.find(f => SKILL_FILES.includes(f));
-            if (skillFile) {
-                filePath = path.join(skillDir, skillFile);
-            }
-        }
-    }
-
-    if (!filePath) {
+    if (!skillInfo) {
         return `Error: Skill "${skillName}" not found`;
     }
+
+    const filePath = skillInfo.filePath;
+    const skillDir = skillInfo.record?.skillDir || path.dirname(filePath);
 
     let currentContent;
     try {
@@ -96,9 +79,6 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     // Update section
     const updatedContent = updateSkillSection(currentContent, section, newContent);
-
-    // Determine skill directory
-    const skillDir = path.dirname(filePath);
 
     try {
         fs.writeFileSync(filePath, updatedContent, 'utf8');

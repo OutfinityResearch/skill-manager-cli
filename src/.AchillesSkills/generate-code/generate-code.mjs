@@ -4,7 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { detectSkillType, parseSkillSections } from '../../skillSchemas.mjs';
+import { detectSkillType, parseSkillSections, loadSpecsContent } from '../../skillSchemas.mjs';
 import {
     buildCodeGenPrompt,
     buildIskillCodeGenPrompt,
@@ -15,11 +15,6 @@ import {
 const SUPPORTED_TYPES = ['tskill', 'iskill', 'oskill', 'cskill'];
 
 export async function action(recursiveSkilledAgent, prompt) {
-    // Derive skillsDir from agent's startDir
-    const skillsDir = recursiveSkilledAgent?.startDir
-        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
-        : null;
-
     // Get llmAgent from the recursiveSkilledAgent
     const llmAgent = recursiveSkilledAgent?.llmAgent;
 
@@ -40,31 +35,15 @@ export async function action(recursiveSkilledAgent, prompt) {
         return 'Error: skillName is required. Usage: generate-code <skillName>';
     }
 
-    // Find skill file
-    let filePath = null;
-    let skillDir = null;
+    // Use findSkillFile to locate the skill
+    const skillInfo = recursiveSkilledAgent?.findSkillFile?.(skillName);
 
-    const skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
-    if (skillRecord && skillRecord.filePath) {
-        filePath = skillRecord.filePath;
-        skillDir = skillRecord.skillDir;
-    } else if (skillsDir) {
-        skillDir = path.join(skillsDir, skillName);
-        if (fs.existsSync(skillDir)) {
-            const files = fs.readdirSync(skillDir);
-            // Look for any supported skill definition file
-            const skillFile = files.find(f =>
-                f === 'tskill.md' || f === 'iskill.md' || f === 'oskill.md' || f === 'cskill.md'
-            );
-            if (skillFile) {
-                filePath = path.join(skillDir, skillFile);
-            }
-        }
-    }
-
-    if (!filePath) {
+    if (!skillInfo) {
         return `Error: Skill "${skillName}" not found`;
     }
+
+    const filePath = skillInfo.filePath;
+    const skillDir = skillInfo.record?.skillDir || path.dirname(filePath);
 
     let content;
     try {
@@ -86,20 +65,23 @@ export async function action(recursiveSkilledAgent, prompt) {
     // Parse sections for context
     const sections = parseSkillSections(content);
 
+    // Load specs content if available
+    const specsContent = loadSpecsContent(skillDir);
+
     // Generate code using LLM with appropriate prompt based on skill type
     let codeGenPrompt;
     switch (skillType) {
         case 'tskill':
-            codeGenPrompt = buildCodeGenPrompt(skillName, content, sections);
+            codeGenPrompt = buildCodeGenPrompt(skillName, content, sections, specsContent);
             break;
         case 'iskill':
-            codeGenPrompt = buildIskillCodeGenPrompt(skillName, content, sections);
+            codeGenPrompt = buildIskillCodeGenPrompt(skillName, content, sections, specsContent);
             break;
         case 'oskill':
-            codeGenPrompt = buildOskillCodeGenPrompt(skillName, content, sections);
+            codeGenPrompt = buildOskillCodeGenPrompt(skillName, content, sections, specsContent);
             break;
         case 'cskill':
-            codeGenPrompt = buildCskillCodeGenPrompt(skillName, content, sections);
+            codeGenPrompt = buildCskillCodeGenPrompt(skillName, content, sections, specsContent);
             break;
         default:
             return `Error: No code generation prompt for skill type: ${skillType}`;

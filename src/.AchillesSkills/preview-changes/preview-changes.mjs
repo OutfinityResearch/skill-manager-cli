@@ -48,13 +48,10 @@ function simpleDiff(oldText, newText) {
 }
 
 export async function action(recursiveSkilledAgent, prompt) {
-    // Derive skillsDir from agent's startDir
-    const skillsDir = recursiveSkilledAgent?.startDir
-        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
-        : null;
+    const skillsDir = recursiveSkilledAgent?.getSkillsDir?.();
 
     if (!skillsDir) {
-        return 'Error: skillsDir not available (agent.startDir not set)';
+        return 'Error: skillsDir not available (agent.getSkillsDir() returned null)';
     }
 
     // Parse arguments

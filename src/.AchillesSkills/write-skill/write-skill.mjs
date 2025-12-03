@@ -4,15 +4,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { SKILL_FILE_NAMES } from 'achilles-agent-lib/RecursiveSkilledAgents';
 
 export async function action(recursiveSkilledAgent, prompt) {
-    // Derive skillsDir from agent's startDir
-    const skillsDir = recursiveSkilledAgent?.startDir
-        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
-        : null;
+    const skillsDir = recursiveSkilledAgent?.getSkillsDir?.();
 
     if (!skillsDir) {
-        return 'Error: skillsDir not available (agent.startDir not set)';
+        return 'Error: skillsDir not available (agent.getSkillsDir() returned null)';
     }
 
     // Parse arguments
@@ -40,10 +38,9 @@ export async function action(recursiveSkilledAgent, prompt) {
     }
 
     // Validate fileName
-    const validFileNames = ['skill.md', 'cskill.md', 'iskill.md', 'oskill.md', 'mskill.md', 'tskill.md'];
-    const isSkillFile = validFileNames.includes(fileName) || fileName.endsWith('.mjs') || fileName.endsWith('.js');
+    const isSkillFile = SKILL_FILE_NAMES.includes(fileName) || fileName.endsWith('.mjs') || fileName.endsWith('.js');
     if (!isSkillFile) {
-        return `Warning: "${fileName}" is not a standard skill file. Valid skill files: ${validFileNames.join(', ')}`;
+        return `Warning: "${fileName}" is not a standard skill file. Valid skill files: ${SKILL_FILE_NAMES.join(', ')}`;
     }
 
     const skillDir = path.join(skillsDir, skillName);

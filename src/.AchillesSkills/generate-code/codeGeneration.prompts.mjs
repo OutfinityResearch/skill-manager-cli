@@ -8,13 +8,21 @@
  * @param {string} skillName - The name of the skill
  * @param {string} content - The full skill definition content
  * @param {Object} sections - Parsed sections from the skill definition
+ * @param {string|null} specsContent - Optional .specs.md content
  * @returns {string} The prompt for the LLM
  */
-export function buildCodeGenPrompt(skillName, content, sections) {
+export function buildCodeGenPrompt(skillName, content, sections, specsContent = null) {
+    const specsBlock = specsContent ? `
+## Skill Specifications
+${specsContent}
+
+---
+` : '';
+
     return `Generate JavaScript/ESM code for a database table skill based on this definition.
 
 ## Skill Name: ${skillName}
-
+${specsBlock}
 ## Skill Definition:
 ${content}
 
@@ -53,13 +61,21 @@ Generate ONLY the JavaScript code, no markdown code blocks, no explanations.`;
  * @param {string} skillName - The name of the skill
  * @param {string} content - The full skill definition content
  * @param {Object} sections - Parsed sections from the skill definition
+ * @param {string|null} specsContent - Optional .specs.md content
  * @returns {string} The prompt for the LLM
  */
-export function buildIskillCodeGenPrompt(skillName, content, sections) {
+export function buildIskillCodeGenPrompt(skillName, content, sections, specsContent = null) {
+    const specsBlock = specsContent ? `
+## Skill Specifications
+${specsContent}
+
+---
+` : '';
+
     return `Generate JavaScript/ESM code for an interactive skill based on this definition.
 
 ## Skill Name: ${skillName}
-
+${specsBlock}
 ## Skill Definition:
 ${content}
 
@@ -141,13 +157,21 @@ Generate ONLY the JavaScript code, no markdown code blocks, no explanations.`;
  * @param {string} skillName - The name of the skill
  * @param {string} content - The full skill definition content
  * @param {Object} sections - Parsed sections from the skill definition
+ * @param {string|null} specsContent - Optional .specs.md content
  * @returns {string} The prompt for the LLM
  */
-export function buildOskillCodeGenPrompt(skillName, content, sections) {
+export function buildOskillCodeGenPrompt(skillName, content, sections, specsContent = null) {
+    const specsBlock = specsContent ? `
+## Skill Specifications
+${specsContent}
+
+---
+` : '';
+
     return `Generate JavaScript/ESM code for an orchestrator skill based on this definition.
 
 ## Skill Name: ${skillName}
-
+${specsBlock}
 ## Skill Definition:
 ${content}
 
@@ -225,15 +249,22 @@ Generate ONLY the JavaScript code, no markdown code blocks, no explanations.`;
  * @param {string} skillName - The name of the skill
  * @param {string} content - The full skill definition content
  * @param {Object} sections - Parsed sections from the skill definition
+ * @param {string|null} specsContent - Optional .specs.md content
  * @returns {string} The prompt for the LLM
  */
-export function buildCskillCodeGenPrompt(skillName, content, sections) {
+export function buildCskillCodeGenPrompt(skillName, content, sections, specsContent = null) {
     const llmMode = sections['LLM-Mode'] || sections['LLM Mode'] || 'fast';
+    const specsBlock = specsContent ? `
+## Skill Specifications
+${specsContent}
+
+---
+` : '';
 
     return `Generate JavaScript/ESM code for a code skill based on this definition.
 
 ## Skill Name: ${skillName}
-
+${specsBlock}
 ## Skill Definition:
 ${content}
 

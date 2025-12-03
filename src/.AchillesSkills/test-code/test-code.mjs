@@ -6,11 +6,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export async function action(recursiveSkilledAgent, prompt) {
-    // Derive skillsDir from agent's startDir
-    const skillsDir = recursiveSkilledAgent?.startDir
-        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
-        : null;
-
     // Parse arguments
     let skillName = null;
     let testInput = undefined;
@@ -33,16 +28,9 @@ export async function action(recursiveSkilledAgent, prompt) {
         return 'Error: skillName is required. Usage: test-code <skillName> or {skillName, testInput}';
     }
 
-    // Find generated file
-    let generatedFile = null;
-    let skillDir = null;
-
-    const skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
-    if (skillRecord && skillRecord.skillDir) {
-        skillDir = skillRecord.skillDir;
-    } else if (skillsDir) {
-        skillDir = path.join(skillsDir, skillName);
-    }
+    // Use findSkillFile to get skill directory
+    const skillInfo = recursiveSkilledAgent?.findSkillFile?.(skillName);
+    const skillDir = skillInfo?.record?.skillDir || (skillInfo ? path.dirname(skillInfo.filePath) : null);
 
     if (!skillDir || !fs.existsSync(skillDir)) {
         return `Error: Skill directory not found for "${skillName}"`;
@@ -50,7 +38,7 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     // Look for generated files - all types use .generated.mjs convention
     const files = fs.readdirSync(skillDir);
-    generatedFile = files.find(f =>
+    const generatedFile = files.find(f =>
         f.endsWith('.generated.mjs') ||
         f.endsWith('.generated.js')
     );

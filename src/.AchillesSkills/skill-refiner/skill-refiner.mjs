@@ -7,7 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { detectSkillType, parseSkillSections } from '../../skillSchemas.mjs';
+import { detectSkillType, parseSkillSections, loadSpecsContent } from '../../skillSchemas.mjs';
 import { buildEvaluationPrompt, buildFixesPrompt } from './skillRefiner.prompts.mjs';
 
 /**
@@ -29,8 +29,8 @@ function parseInput(prompt) {
 /**
  * Evaluate test results using LLM
  */
-async function evaluateWithLLM(testResult, requirements, llmAgent) {
-    const evalPrompt = buildEvaluationPrompt(testResult, requirements);
+async function evaluateWithLLM(testResult, requirements, llmAgent, specsContent = null) {
+    const evalPrompt = buildEvaluationPrompt(testResult, requirements, specsContent);
 
     try {
         const response = await llmAgent.executePrompt(evalPrompt, {
@@ -54,8 +54,8 @@ async function evaluateWithLLM(testResult, requirements, llmAgent) {
 /**
  * Generate section updates based on failures
  */
-async function generateFixes(skillContent, failures, history, llmAgent) {
-    const fixesPrompt = buildFixesPrompt(skillContent, failures, history);
+async function generateFixes(skillContent, failures, history, llmAgent, specsContent = null) {
+    const fixesPrompt = buildFixesPrompt(skillContent, failures, history, specsContent);
 
     try {
         const response = await llmAgent.executePrompt(fixesPrompt, {
@@ -79,11 +79,6 @@ async function generateFixes(skillContent, failures, history, llmAgent) {
  * Main action function for the skill refiner
  */
 export async function action(recursiveSkilledAgent, prompt) {
-    // Derive skillsDir from agent's startDir
-    const skillsDir = recursiveSkilledAgent?.startDir
-        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
-        : null;
-
     // Get llmAgent from the recursiveSkilledAgent
     const llmAgent = recursiveSkilledAgent?.llmAgent;
 
@@ -103,26 +98,18 @@ export async function action(recursiveSkilledAgent, prompt) {
         return 'Error: LLM agent not available for skill refinement';
     }
 
-    // Find skill
-    let skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
-    let skillDir = skillRecord?.skillDir;
-    let filePath = skillRecord?.filePath;
+    // Use findSkillFile to locate the skill
+    const skillInfo = recursiveSkilledAgent?.findSkillFile?.(skillName);
 
-    if (!filePath && skillsDir) {
-        skillDir = path.join(skillsDir, skillName);
-        if (fs.existsSync(skillDir)) {
-            const SKILL_FILES = ['tskill.md', 'cskill.md', 'iskill.md', 'oskill.md', 'mskill.md', 'skill.md'];
-            const files = fs.readdirSync(skillDir);
-            const skillFile = files.find(f => SKILL_FILES.includes(f));
-            if (skillFile) {
-                filePath = path.join(skillDir, skillFile);
-            }
-        }
-    }
-
-    if (!filePath) {
+    if (!skillInfo) {
         return `Error: Skill "${skillName}" not found`;
     }
+
+    const filePath = skillInfo.filePath;
+    const skillDir = skillInfo.record?.skillDir || path.dirname(filePath);
+
+    // Load specs content if available
+    const specsContent = loadSpecsContent(skillDir);
 
     const history = [];
     const output = [];
@@ -188,7 +175,7 @@ export async function action(recursiveSkilledAgent, prompt) {
 
         // 4. Evaluate results
         output.push('Evaluating results...');
-        const evaluation = await evaluateWithLLM(testResult, requirements, llmAgent);
+        const evaluation = await evaluateWithLLM(testResult, requirements, llmAgent, specsContent);
 
         history.push({
             iteration,
@@ -222,7 +209,7 @@ export async function action(recursiveSkilledAgent, prompt) {
 
         // 7. Generate and apply fixes
         output.push('Generating fixes...');
-        const fixes = await generateFixes(skillContent, evaluation.failures, history, llmAgent);
+        const fixes = await generateFixes(skillContent, evaluation.failures, history, llmAgent, specsContent);
 
         if (!fixes.fixes || fixes.fixes.length === 0) {
             output.push('No fixes generated, stopping');

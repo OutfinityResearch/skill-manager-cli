@@ -7,11 +7,19 @@
  * Build the prompt for evaluating test results against requirements
  * @param {*} testResult - The result from running tests
  * @param {Object} requirements - The requirements to check against
+ * @param {string|null} specsContent - Optional .specs.md content
  * @returns {string} The prompt for the LLM
  */
-export function buildEvaluationPrompt(testResult, requirements) {
-    return `Evaluate if this test result meets the requirements.
+export function buildEvaluationPrompt(testResult, requirements, specsContent = null) {
+    const specsBlock = specsContent ? `
+## Skill Specifications
+${specsContent}
 
+---
+` : '';
+
+    return `Evaluate if this test result meets the requirements.
+${specsBlock}
 ## Requirements:
 ${JSON.stringify(requirements, null, 2)}
 
@@ -37,15 +45,25 @@ Respond in JSON format:
  * @param {string} skillContent - The current skill definition content
  * @param {Array} failures - Array of failure objects from evaluation
  * @param {Array} history - Array of previous iteration results
+ * @param {string|null} specsContent - Optional .specs.md content
  * @returns {string} The prompt for the LLM
  */
-export function buildFixesPrompt(skillContent, failures, history) {
+export function buildFixesPrompt(skillContent, failures, history, specsContent = null) {
     const historyContext = history.map((h, i) =>
         `Iteration ${i + 1}: ${h.evaluation?.failures?.map(f => f.reason).join(', ') || 'No failures recorded'}`
     ).join('\n');
 
-    return `You need to fix a skill definition based on test failures.
+    const specsBlock = specsContent ? `
+## Skill Specifications
+These specifications must be respected:
 
+${specsContent}
+
+---
+` : '';
+
+    return `You need to fix a skill definition based on test failures.
+${specsBlock}
 ## Current Skill Definition:
 ${skillContent}
 

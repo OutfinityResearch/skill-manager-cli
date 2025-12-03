@@ -5,7 +5,7 @@
 import { Sanitiser } from 'achilles-agent-lib/utils/Sanitiser.mjs';
 
 export async function action(recursiveSkilledAgent, prompt) {
-    if (!recursiveSkilledAgent || !recursiveSkilledAgent.skillCatalog) {
+    if (!recursiveSkilledAgent || typeof recursiveSkilledAgent.getSkills !== 'function') {
         return 'Error: No skill catalog available';
     }
 
@@ -34,7 +34,7 @@ export async function action(recursiveSkilledAgent, prompt) {
         filter = prompt.filter.toLowerCase();
     }
 
-    const skills = Array.from(recursiveSkilledAgent.skillCatalog.values());
+    const skills = recursiveSkilledAgent.getSkills();
 
     if (skills.length === 0) {
         return 'No skills currently registered. Create one with write-skill or use get-template.';

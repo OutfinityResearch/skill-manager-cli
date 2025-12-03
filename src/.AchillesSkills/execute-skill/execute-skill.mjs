@@ -43,21 +43,13 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     if (!skillRecord) {
         // List available user skills
-        const allSkills = Array.from(recursiveSkilledAgent.skillCatalog?.values?.() || []);
-        const builtInDir = recursiveSkilledAgent.additionalSkillRoots?.[0];
-
-        const userSkills = allSkills.filter(s => {
-            if (!builtInDir) return true;
-            return !s.skillDir?.startsWith(builtInDir);
-        });
-
+        const userSkills = recursiveSkilledAgent.getUserSkills?.() || [];
         const skillNames = userSkills.map(s => s.shortName || s.name).join(', ');
         return `Error: Skill "${skillName}" not found.\nAvailable user skills: ${skillNames || 'none'}`;
     }
 
     // Check if it's a built-in skill (we only want to execute user skills)
-    const builtInDir = recursiveSkilledAgent.additionalSkillRoots?.[0];
-    if (builtInDir && skillRecord.skillDir?.startsWith(builtInDir)) {
+    if (recursiveSkilledAgent.isBuiltInSkill?.(skillRecord)) {
         return `Error: "${skillName}" is a built-in management skill, not a user skill.\nUse the skill directly (e.g., "read-skill joker") instead of execute-skill.`;
     }
 

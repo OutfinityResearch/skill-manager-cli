@@ -3,6 +3,9 @@
  * Defines the structure, required sections, and templates for each skill type
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 export const SKILL_TYPES = {
     tskill: {
         fileName: 'tskill.md',
@@ -466,6 +469,42 @@ function escapeRegex(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Load specs content from a skill directory
+ * @param {string} skillDir - Path to the skill directory
+ * @returns {string|null} - Specs content or null if not found
+ */
+export function loadSpecsContent(skillDir) {
+    if (!skillDir) return null;
+    const specsPath = path.join(skillDir, '.specs.md');
+    try {
+        if (fs.existsSync(specsPath)) {
+            return fs.readFileSync(specsPath, 'utf8');
+        }
+    } catch (error) {
+        // Specs are optional, silently ignore errors
+    }
+    return null;
+}
+
+/**
+ * Format specs content for inclusion in LLM prompts
+ * @param {string|null} specsContent - The .specs.md file content
+ * @returns {string} - Formatted specs block or empty string
+ */
+export function buildSpecsContext(specsContent) {
+    if (!specsContent) return '';
+    return `
+## Skill Specifications (.specs.md)
+The following specifications define requirements and constraints for this skill:
+
+${specsContent}
+
+---
+IMPORTANT: Ensure all modifications comply with the above specifications.
+`;
+}
+
 export default {
     SKILL_TYPES,
     SKILL_TEMPLATES,
@@ -473,4 +512,6 @@ export default {
     validateSkillContent,
     parseSkillSections,
     updateSkillSection,
+    loadSpecsContent,
+    buildSpecsContext,
 };
