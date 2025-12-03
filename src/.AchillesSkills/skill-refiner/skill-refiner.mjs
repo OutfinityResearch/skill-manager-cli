@@ -13,27 +13,27 @@ import { buildEvaluationPrompt, buildFixesPrompt } from './skillRefiner.prompts.
 /**
  * Parse input to extract skill name, requirements, and options
  */
-function parseInput(input) {
-    if (typeof input === 'string') {
+function parseInput(prompt) {
+    if (typeof prompt === 'string') {
         // Try to parse as JSON
         try {
-            return JSON.parse(input);
+            return JSON.parse(prompt);
         } catch (e) {
             // Treat as skill name with default options
-            return { skillName: input.trim() };
+            return { skillName: prompt.trim() };
         }
     }
-    return input || {};
+    return prompt || {};
 }
 
 /**
  * Evaluate test results using LLM
  */
 async function evaluateWithLLM(testResult, requirements, llmAgent) {
-    const prompt = buildEvaluationPrompt(testResult, requirements);
+    const evalPrompt = buildEvaluationPrompt(testResult, requirements);
 
     try {
-        const response = await llmAgent.executePrompt(prompt, {
+        const response = await llmAgent.executePrompt(evalPrompt, {
             responseShape: 'json',
             mode: 'fast',
         });
@@ -55,10 +55,10 @@ async function evaluateWithLLM(testResult, requirements, llmAgent) {
  * Generate section updates based on failures
  */
 async function generateFixes(skillContent, failures, history, llmAgent) {
-    const prompt = buildFixesPrompt(skillContent, failures, history);
+    const fixesPrompt = buildFixesPrompt(skillContent, failures, history);
 
     try {
-        const response = await llmAgent.executePrompt(prompt, {
+        const response = await llmAgent.executePrompt(fixesPrompt, {
             responseShape: 'json',
             mode: 'deep',
         });
@@ -78,8 +78,14 @@ async function generateFixes(skillContent, failures, history, llmAgent) {
 /**
  * Main action function for the skill refiner
  */
-export async function action(input, context) {
-    const { skillsDir, skilledAgent, llmAgent } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
+
+    // Get llmAgent from the recursiveSkilledAgent
+    const llmAgent = recursiveSkilledAgent?.llmAgent;
 
     // Parse input
     const {
@@ -87,7 +93,7 @@ export async function action(input, context) {
         requirements = {},
         maxIterations = 5,
         evaluator = 'llm',
-    } = parseInput(input);
+    } = parseInput(prompt);
 
     if (!skillName) {
         return 'Error: skillName is required. Usage: skill-refiner {skillName, requirements?, maxIterations?}';
@@ -98,7 +104,7 @@ export async function action(input, context) {
     }
 
     // Find skill
-    let skillRecord = skilledAgent?.getSkillRecord?.(skillName);
+    let skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
     let skillDir = skillRecord?.skillDir;
     let filePath = skillRecord?.filePath;
 
@@ -147,11 +153,10 @@ export async function action(input, context) {
             output.push('Generating code...');
             try {
                 // Use the generate-code skill
-                const generateSkill = skilledAgent?.getSkillRecord?.('generate-code');
+                const generateSkill = recursiveSkilledAgent?.getSkillRecord?.('generate-code');
                 if (generateSkill) {
-                    generateResult = await skilledAgent.executePrompt(skillName, {
+                    generateResult = await recursiveSkilledAgent.executePrompt(skillName, {
                         skillName: 'generate-code',
-                        context,
                     });
                 } else {
                     // Fallback: direct generation
@@ -166,11 +171,11 @@ export async function action(input, context) {
         let testResult = null;
         output.push('Testing code...');
         try {
-            const testSkill = skilledAgent?.getSkillRecord?.('test-code');
+            const testSkill = recursiveSkilledAgent?.getSkillRecord?.('test-code');
             if (testSkill) {
-                testResult = await skilledAgent.executePrompt(
+                testResult = await recursiveSkilledAgent.executePrompt(
                     JSON.stringify({ skillName, testInput: requirements.testInput }),
-                    { skillName: 'test-code', context }
+                    { skillName: 'test-code' }
                 );
             } else {
                 testResult = 'Test skill not available';

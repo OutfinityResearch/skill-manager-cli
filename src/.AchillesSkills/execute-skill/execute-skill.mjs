@@ -2,11 +2,9 @@
  * Execute Skill - Executes a user skill and returns its output
  */
 
-export async function action(input, context) {
-    const { skilledAgent } = context;
-
-    if (!skilledAgent) {
-        return 'Error: No skilledAgent available in context';
+export async function action(recursiveSkilledAgent, prompt) {
+    if (!recursiveSkilledAgent) {
+        return 'Error: No recursiveSkilledAgent available';
     }
 
     // Parse input - can be:
@@ -16,8 +14,8 @@ export async function action(input, context) {
     let skillName = null;
     let skillInput = '';
 
-    if (typeof input === 'string' && input.trim()) {
-        const trimmed = input.trim();
+    if (typeof prompt === 'string' && prompt.trim()) {
+        const trimmed = prompt.trim();
         // Check for common patterns like "execute joker with topic=programming"
         // or "joker topic=programming" or just "joker"
         const withMatch = trimmed.match(/^(\S+)\s+(?:with\s+)?(.+)$/i);
@@ -27,9 +25,9 @@ export async function action(input, context) {
         } else {
             skillName = trimmed;
         }
-    } else if (input && typeof input === 'object') {
-        skillName = input.skillName || input.name || input.skill;
-        skillInput = input.input || input.skillInput || input.args || '';
+    } else if (prompt && typeof prompt === 'object') {
+        skillName = prompt.skillName || prompt.name || prompt.skill;
+        skillInput = prompt.input || prompt.skillInput || prompt.args || '';
     }
 
     if (!skillName) {
@@ -40,13 +38,13 @@ export async function action(input, context) {
     const normalizedName = skillName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
     // Find the skill record
-    const skillRecord = skilledAgent.getSkillRecord?.(normalizedName)
-        || skilledAgent.getSkillRecord?.(skillName);
+    const skillRecord = recursiveSkilledAgent.getSkillRecord?.(normalizedName)
+        || recursiveSkilledAgent.getSkillRecord?.(skillName);
 
     if (!skillRecord) {
         // List available user skills
-        const allSkills = Array.from(skilledAgent.skillCatalog?.values?.() || []);
-        const builtInDir = skilledAgent.builtInSkillsDir || context.builtInSkillsDir;
+        const allSkills = Array.from(recursiveSkilledAgent.skillCatalog?.values?.() || []);
+        const builtInDir = recursiveSkilledAgent.additionalSkillRoots?.[0];
 
         const userSkills = allSkills.filter(s => {
             if (!builtInDir) return true;
@@ -58,14 +56,14 @@ export async function action(input, context) {
     }
 
     // Check if it's a built-in skill (we only want to execute user skills)
-    const builtInDir = skilledAgent.builtInSkillsDir || context.builtInSkillsDir;
+    const builtInDir = recursiveSkilledAgent.additionalSkillRoots?.[0];
     if (builtInDir && skillRecord.skillDir?.startsWith(builtInDir)) {
         return `Error: "${skillName}" is a built-in management skill, not a user skill.\nUse the skill directly (e.g., "read-skill joker") instead of execute-skill.`;
     }
 
     // Execute the skill
     try {
-        const result = await skilledAgent.executeWithReviewMode(
+        const result = await recursiveSkilledAgent.executeWithReviewMode(
             skillInput || `Execute ${skillName}`,
             { skillName: skillRecord.name },
             'none'

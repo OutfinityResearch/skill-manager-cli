@@ -4,10 +4,8 @@
 
 import { Sanitiser } from 'achilles-agent-lib/utils/Sanitiser.mjs';
 
-export async function action(input, context) {
-    const { skilledAgent } = context;
-
-    if (!skilledAgent || !skilledAgent.skillCatalog) {
+export async function action(recursiveSkilledAgent, prompt) {
+    if (!recursiveSkilledAgent || !recursiveSkilledAgent.skillCatalog) {
         return 'Error: No skill catalog available';
     }
 
@@ -26,17 +24,17 @@ export async function action(input, context) {
         return words > 3 || str.includes('"') || str.includes("'");
     };
 
-    if (typeof input === 'string' && input.trim()) {
-        const trimmed = input.trim().toLowerCase();
+    if (typeof prompt === 'string' && prompt.trim()) {
+        const trimmed = prompt.trim().toLowerCase();
         // Only use as filter if it's not a common command phrase or full command
         if (!ignorePatterns.includes(trimmed) && !looksLikeCommand(trimmed)) {
             filter = trimmed;
         }
-    } else if (input && typeof input === 'object' && input.filter) {
-        filter = input.filter.toLowerCase();
+    } else if (prompt && typeof prompt === 'object' && prompt.filter) {
+        filter = prompt.filter.toLowerCase();
     }
 
-    const skills = Array.from(skilledAgent.skillCatalog.values());
+    const skills = Array.from(recursiveSkilledAgent.skillCatalog.values());
 
     if (skills.length === 0) {
         return 'No skills currently registered. Create one with write-skill or use get-template.';

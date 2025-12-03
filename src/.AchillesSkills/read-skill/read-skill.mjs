@@ -5,21 +5,24 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export async function action(input, context) {
-    const { skillsDir, skilledAgent } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
 
-    // Parse skill name from input
+    // Parse skill name from prompt
     let skillName = null;
-    if (typeof input === 'string') {
+    if (typeof prompt === 'string') {
         try {
-            const parsed = JSON.parse(input);
+            const parsed = JSON.parse(prompt);
             skillName = parsed.skillName || parsed.name;
         } catch (e) {
             // Not JSON, treat as string
-            skillName = input.trim();
+            skillName = prompt.trim();
         }
-    } else if (input && typeof input === 'object') {
-        skillName = input.skillName || input.name;
+    } else if (prompt && typeof prompt === 'object') {
+        skillName = prompt.skillName || prompt.name;
     }
 
     if (!skillName) {
@@ -27,7 +30,7 @@ export async function action(input, context) {
     }
 
     // Try to find skill in catalog first
-    const skillRecord = skilledAgent?.getSkillRecord?.(skillName);
+    const skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
     if (skillRecord && skillRecord.filePath) {
         try {
             const content = fs.readFileSync(skillRecord.filePath, 'utf8');

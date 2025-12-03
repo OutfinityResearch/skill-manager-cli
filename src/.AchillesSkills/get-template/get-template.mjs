@@ -4,13 +4,13 @@
 
 import { SKILL_TYPES, SKILL_TEMPLATES } from '../../skillSchemas.mjs';
 
-export async function action(input, context) {
+export async function action(recursiveSkilledAgent, prompt) {
     // Parse skill type
     let skillType = null;
-    if (typeof input === 'string' && input.trim()) {
-        skillType = input.trim().toLowerCase();
-    } else if (input && typeof input === 'object') {
-        skillType = (input.skillType || input.type || '').toLowerCase();
+    if (typeof prompt === 'string' && prompt.trim()) {
+        skillType = prompt.trim().toLowerCase();
+    } else if (prompt && typeof prompt === 'object') {
+        skillType = (prompt.skillType || prompt.type || '').toLowerCase();
     }
 
     const availableTypes = Object.keys(SKILL_TEMPLATES);

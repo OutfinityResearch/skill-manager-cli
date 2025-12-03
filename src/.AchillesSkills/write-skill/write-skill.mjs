@@ -5,23 +5,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export async function action(input, context) {
-    const { skillsDir, skilledAgent } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
 
     if (!skillsDir) {
-        return 'Error: skillsDir not configured in context';
+        return 'Error: skillsDir not available (agent.startDir not set)';
     }
 
     // Parse arguments
     let args;
-    if (typeof input === 'string') {
+    if (typeof prompt === 'string') {
         try {
-            args = JSON.parse(input);
+            args = JSON.parse(prompt);
         } catch (e) {
-            return `Error: Invalid JSON input. Expected: {skillName, fileName, content}. Got: ${input.slice(0, 100)}`;
+            return `Error: Invalid JSON input. Expected: {skillName, fileName, content}. Got: ${prompt.slice(0, 100)}`;
         }
     } else {
-        args = input || {};
+        args = prompt || {};
     }
 
     const { skillName, fileName, content } = args;
@@ -62,9 +65,9 @@ export async function action(input, context) {
 
         // Auto-reload skills so the new skill is immediately available
         let reloadMessage = '';
-        if (skilledAgent && typeof skilledAgent.reloadSkills === 'function') {
+        if (recursiveSkilledAgent && typeof recursiveSkilledAgent.reloadSkills === 'function') {
             try {
-                const count = skilledAgent.reloadSkills();
+                const count = recursiveSkilledAgent.reloadSkills();
                 reloadMessage = `\nSkills reloaded (${count} skill(s) registered).`;
             } catch (e) {
                 reloadMessage = '\nNote: Could not auto-reload skills. Use "reload" command.';

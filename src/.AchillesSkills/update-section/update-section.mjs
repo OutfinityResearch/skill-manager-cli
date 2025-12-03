@@ -19,14 +19,14 @@ function hasGeneratedCode(skillDir) {
 /**
  * Trigger code regeneration for the skill
  */
-async function triggerCodeRegeneration(skillName, context) {
+async function triggerCodeRegeneration(skillName, recursiveSkilledAgent) {
     try {
         // Dynamically import generate-code to avoid circular dependencies
         const generateCodeModule = await import('../generate-code/generate-code.mjs');
         const generateAction = generateCodeModule.action || generateCodeModule.default;
 
         if (typeof generateAction === 'function') {
-            const result = await generateAction(skillName, context);
+            const result = await generateAction(recursiveSkilledAgent, skillName);
             return { success: true, result };
         }
         return { success: false, error: 'generate-code action not found' };
@@ -35,19 +35,22 @@ async function triggerCodeRegeneration(skillName, context) {
     }
 }
 
-export async function action(input, context) {
-    const { skillsDir, skilledAgent } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
 
     // Parse arguments
     let args;
-    if (typeof input === 'string') {
+    if (typeof prompt === 'string') {
         try {
-            args = JSON.parse(input);
+            args = JSON.parse(prompt);
         } catch (e) {
             return `Error: Invalid JSON input. Expected: {skillName, section, content}`;
         }
     } else {
-        args = input || {};
+        args = prompt || {};
     }
 
     const { skillName, section, content: newContent } = args;
@@ -65,7 +68,7 @@ export async function action(input, context) {
     // Find skill file
     let filePath = null;
 
-    const skillRecord = skilledAgent?.getSkillRecord?.(skillName);
+    const skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
     if (skillRecord && skillRecord.filePath) {
         filePath = skillRecord.filePath;
     } else if (skillsDir) {
@@ -107,7 +110,7 @@ export async function action(input, context) {
             messages.push('');
             messages.push('Detected existing generated code. Triggering regeneration...');
 
-            const regenResult = await triggerCodeRegeneration(skillName, context);
+            const regenResult = await triggerCodeRegeneration(skillName, recursiveSkilledAgent);
 
             if (regenResult.success) {
                 messages.push(`Code regenerated successfully.`);

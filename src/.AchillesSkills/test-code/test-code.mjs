@@ -5,25 +5,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export async function action(input, context) {
-    const { skillsDir, skilledAgent } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
 
     // Parse arguments
     let skillName = null;
     let testInput = undefined;
 
-    if (typeof input === 'string') {
+    if (typeof prompt === 'string') {
         try {
-            const parsed = JSON.parse(input);
+            const parsed = JSON.parse(prompt);
             skillName = parsed.skillName || parsed.name;
             testInput = parsed.testInput;
         } catch (e) {
             // Treat as plain skill name
-            skillName = input.trim();
+            skillName = prompt.trim();
         }
-    } else if (input && typeof input === 'object') {
-        skillName = input.skillName || input.name;
-        testInput = input.testInput;
+    } else if (prompt && typeof prompt === 'object') {
+        skillName = prompt.skillName || prompt.name;
+        testInput = prompt.testInput;
     }
 
     if (!skillName) {
@@ -34,7 +37,7 @@ export async function action(input, context) {
     let generatedFile = null;
     let skillDir = null;
 
-    const skillRecord = skilledAgent?.getSkillRecord?.(skillName);
+    const skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
     if (skillRecord && skillRecord.skillDir) {
         skillDir = skillRecord.skillDir;
     } else if (skillsDir) {

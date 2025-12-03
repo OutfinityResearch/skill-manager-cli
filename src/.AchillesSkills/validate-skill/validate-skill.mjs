@@ -6,20 +6,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { validateSkillContent, detectSkillType } from '../../skillSchemas.mjs';
 
-export async function action(input, context) {
-    const { skillsDir, skilledAgent } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
 
     // Parse skill name
     let skillName = null;
-    if (typeof input === 'string') {
+    if (typeof prompt === 'string') {
         try {
-            const parsed = JSON.parse(input);
+            const parsed = JSON.parse(prompt);
             skillName = parsed.skillName || parsed.name;
         } catch (e) {
-            skillName = input.trim();
+            skillName = prompt.trim();
         }
-    } else if (input && typeof input === 'object') {
-        skillName = input.skillName || input.name;
+    } else if (prompt && typeof prompt === 'object') {
+        skillName = prompt.skillName || prompt.name;
     }
 
     if (!skillName) {
@@ -31,7 +34,7 @@ export async function action(input, context) {
     let content = null;
 
     // Try catalog first
-    const skillRecord = skilledAgent?.getSkillRecord?.(skillName);
+    const skillRecord = recursiveSkilledAgent?.getSkillRecord?.(skillName);
     if (skillRecord && skillRecord.filePath) {
         filePath = skillRecord.filePath;
     } else if (skillsDir) {

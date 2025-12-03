@@ -47,23 +47,26 @@ function simpleDiff(oldText, newText) {
     return diff.join('\n');
 }
 
-export async function action(input, context) {
-    const { skillsDir } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
 
     if (!skillsDir) {
-        return 'Error: skillsDir not configured in context';
+        return 'Error: skillsDir not available (agent.startDir not set)';
     }
 
     // Parse arguments
     let args;
-    if (typeof input === 'string') {
+    if (typeof prompt === 'string') {
         try {
-            args = JSON.parse(input);
+            args = JSON.parse(prompt);
         } catch (e) {
             return `Error: Invalid JSON input. Expected: {skillName, fileName, newContent}`;
         }
     } else {
-        args = input || {};
+        args = prompt || {};
     }
 
     const { skillName, fileName, newContent } = args;

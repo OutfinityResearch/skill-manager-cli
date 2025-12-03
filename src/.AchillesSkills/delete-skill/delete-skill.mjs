@@ -5,19 +5,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export async function action(input, context) {
-    const { skillsDir } = context;
+export async function action(recursiveSkilledAgent, prompt) {
+    // Derive skillsDir from agent's startDir
+    const skillsDir = recursiveSkilledAgent?.startDir
+        ? path.join(recursiveSkilledAgent.startDir, '.AchillesSkills')
+        : null;
 
     if (!skillsDir) {
-        return 'Error: skillsDir not configured in context';
+        return 'Error: skillsDir not available (agent.startDir not set)';
     }
 
     // Parse skill name
     let skillName = null;
-    if (typeof input === 'string' && input.trim()) {
-        skillName = input.trim();
-    } else if (input && typeof input === 'object') {
-        skillName = input.skillName || input.name;
+    if (typeof prompt === 'string' && prompt.trim()) {
+        skillName = prompt.trim();
+    } else if (prompt && typeof prompt === 'object') {
+        skillName = prompt.skillName || prompt.name;
     }
 
     if (!skillName) {
