@@ -2,51 +2,16 @@
  * HelpPrinter - Stateless utility functions for displaying help and history.
  *
  * Extracted from SkillManagerCli to reduce file size and improve modularity.
+ * Uses HelpSystem for the main help content.
  */
+
+import { getQuickReference } from './HelpSystem.mjs';
 
 /**
  * Print the quick reference help screen.
  */
 export function printHelp() {
-    console.log(`
-+----------------------------------------------------------+
-|                     Quick Reference                       |
-+----------------------------------------------------------+
-
-Quick Commands (no LLM):
-  list, ls          List user skills
-  list all, ls -a   List all skills (including built-in)
-  reload            Refresh skills from disk
-  history, hist     Show recent command history
-  help              Show this help
-  exit, quit, q     Exit the CLI
-  Esc               Cancel running operation
-
-Slash Commands (direct skill execution):
-  /help             Show all slash commands
-  /ls               List skills
-  /read <skill>     Read skill definition
-  /write <skill>    Create/update skill
-  /validate <skill> Validate against schema
-  /generate <skill> Generate code from tskill
-  /test <skill>     Test generated code
-  /refine <skill>   Iteratively improve skill
-  /exec <skill>     Execute any skill directly
-
-Natural Language Examples:
-  "list all skills"
-  "read the equipment skill"
-  "create a new tskill called inventory"
-  "validate the area skill"
-  "generate code for equipment"
-
-Skill Types:
-  tskill - Database table (fields, validators, etc.)
-  cskill - Code skill (LLM generates code)
-  iskill - Interactive (commands, user input)
-  oskill - Orchestrator (routes to other skills)
-  mskill - MCP tool integration
-`);
+    console.log(getQuickReference());
 }
 
 /**

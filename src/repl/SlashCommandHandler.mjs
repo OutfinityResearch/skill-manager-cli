@@ -5,6 +5,7 @@
  */
 
 import { formatSlashResult } from '../ui/ResultFormatter.mjs';
+import { showHelp, getQuickReference } from '../ui/HelpSystem.mjs';
 
 /**
  * SlashCommandHandler class for managing slash commands in the CLI.
@@ -99,13 +100,9 @@ export class SlashCommandHandler {
             args: 'required',
             needsSkillArg: true,
         },
-        'preview': {
-            skill: 'preview-changes',
-            usage: '/preview <skill-name>',
-            description: 'Preview changes before applying',
-            args: 'required',
-            needsSkillArg: true,
-        },
+        // Note: 'preview-changes' skill exists but requires programmatic input
+        // (skillName, fileName, newContent as JSON). It's called by other skills,
+        // not directly via slash command.
         'exec': {
             skill: null, // Dynamic - uses the argument as skill name
             usage: '/exec <skill-name> [input]',
@@ -174,15 +171,25 @@ export class SlashCommandHandler {
      * @returns {Promise<{handled: boolean, result?: string, error?: string}>}
      */
     async executeSlashCommand(command, args, options = {}) {
-        // Handle /help specially
+        // Handle /help [topic] - show topic-based help or picker
         if (command === 'help' || command === '?') {
-            this.printHelp();
+            if (!args) {
+                // No args - show interactive help picker
+                return {
+                    handled: true,
+                    showHelpPicker: true,
+                };
+            }
+            // Args provided - show help for specific topic
+            const helpText = showHelp(args);
+            console.log(helpText);
             return { handled: true };
         }
 
         // Handle /commands to list all available commands
         if (command === 'commands') {
-            this.printHelp();
+            const helpText = showHelp('commands');
+            console.log(helpText);
             return { handled: true };
         }
 
@@ -344,7 +351,7 @@ export class SlashCommandHandler {
                 const argPrefix = args.toLowerCase();
 
                 // For commands that take skill names, suggest user skills
-                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'preview', 'specs', 'specs-write'].includes(command)) {
+                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'specs', 'specs-write'].includes(command)) {
                     const skills = this.getUserSkills();
                     const matchingSkills = skills
                         .map(s => s.shortName || s.name)
@@ -443,56 +450,11 @@ export class SlashCommandHandler {
 
     /**
      * Print slash command help.
+     * Delegates to HelpSystem for comprehensive help.
      */
     printHelp() {
-        console.log(`
-┌──────────────────────────────────────────────────────────┐
-│                    Slash Commands                        │
-└──────────────────────────────────────────────────────────┘
-
-Skill Management:
-  /ls [all]              List skills (add "all" for built-in)
-  /read <skill>          Read skill definition
-  /write <skill> [type]  Create/update skill (type: tskill, cskill, etc.)
-  /delete <skill>        Delete a skill
-  /validate <skill>      Validate against schema
-  /template <type>       Get blank template
-
-Code Generation:
-  /generate <skill>      Generate .mjs from tskill.md
-  /test <skill>          Test generated code
-  /refine <skill>        Iteratively improve until tests pass
-
-Specifications:
-  /specs <skill>         Read a skill's .specs.md file
-  /specs-write <skill>   Create/update .specs.md (generates template if no content)
-
-Editing:
-  /update <skill> <section>  Update a specific section
-  /preview <skill>           Preview pending changes
-
-Advanced:
-  /exec <skill> [input]  Execute any skill directly
-
-Output:
-  /raw                   Toggle markdown rendering on/off
-
-Session:
-  /quit, /exit, /q       Exit the REPL
-
-Help:
-  /help, /?              Show this help
-  /commands              List all commands
-
-Examples:
-  /ls                    List user skills
-  /read my-skill         Read my-skill definition
-  /write inventory tskill Create new tskill called inventory
-  /generate equipment    Generate code for equipment tskill
-  /specs equipment       View equipment's .specs.md
-  /specs-write my-skill  Generate specs template for my-skill
-  /exec list-skills      Execute list-skills directly
-`);
+        const helpText = showHelp('commands');
+        console.log(helpText);
     }
 }
 

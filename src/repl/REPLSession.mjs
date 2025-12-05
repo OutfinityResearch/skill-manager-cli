@@ -7,7 +7,7 @@
 
 import path from 'node:path';
 import { createSpinner } from '../ui/spinner.mjs';
-import { buildCommandList, showTestSelector } from '../ui/CommandSelector.mjs';
+import { buildCommandList, showTestSelector, showHelpSelector } from '../ui/CommandSelector.mjs';
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
 import { summarizeResult } from '../ui/ResultFormatter.mjs';
 import { HistoryManager } from './HistoryManager.mjs';
@@ -17,6 +17,7 @@ import { QuickCommands } from './QuickCommands.mjs';
 import { NaturalLanguageProcessor } from './NaturalLanguageProcessor.mjs';
 import { discoverSkillTests, runTestFile, runTestSuite } from '../lib/testDiscovery.mjs';
 import { formatTestResult, formatSuiteResults } from '../ui/TestResultFormatter.mjs';
+import { showHelp, getHelpTopics, getCommandHelp } from '../ui/HelpSystem.mjs';
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -266,6 +267,8 @@ export class REPLSession {
                 context: this.context,
             });
 
+            console.log('[DEBUG] Slash command result:', JSON.stringify(result, null, 2));
+
             if (result.handled) {
                 // Handle /quit and /exit commands
                 if (result.exitRepl) {
@@ -285,6 +288,12 @@ export class REPLSession {
                 } else if (result.showRunTestsPicker) {
                     spinner.stop();
                     await this._handleRunTestsPicker();
+                // Handle /help with no args - show interactive help picker
+                } else if (result.showHelpPicker) {
+                    spinner.stop();
+                    console.log('\n[DEBUG] Calling _handleHelpPicker...');
+                    await this._handleHelpPicker();
+                    console.log('[DEBUG] _handleHelpPicker completed.\n');
                 } else if (result.error) {
                     spinner.fail(result.error);
                 } else if (result.result) {
@@ -447,6 +456,71 @@ export class REPLSession {
                 spinner.fail(`Test error: ${error.message}`);
             }
         }
+    }
+
+    /**
+     * Handle interactive help picker when /help is called without args.
+     * Shows available help topics and commands for user to select.
+     * @private
+     */
+    async _handleHelpPicker() {
+        console.log('[DEBUG] _handleHelpPicker started');
+
+        // Build help topics list
+        const topics = getHelpTopics();
+        const commands = getCommandHelp();
+
+        console.log(`[DEBUG] Got ${topics.length} topics, ${commands.length} commands`);
+
+        // Combine topics and commands into a single list
+        const helpItems = [
+            // Topics first (grouped)
+            ...topics.map(t => ({
+                name: t.name,
+                title: t.title,
+                description: t.title,
+                type: 'topic',
+            })),
+            // Then individual commands
+            ...commands.map(c => ({
+                name: `/${c.name}`,
+                title: c.title,
+                description: c.title,
+                type: 'command',
+            })),
+        ];
+
+        console.log(`[DEBUG] Built ${helpItems.length} help items`);
+
+        console.log(`\nSelect a help topic or command:\n`);
+
+        // Show interactive help selector
+        let selected;
+        try {
+            selected = await showHelpSelector(helpItems, {
+                prompt: 'Help> ',
+                maxVisible: 12,
+            });
+        } catch (error) {
+            console.error(`\nError showing help selector: ${error.message}\n`);
+            return;
+        }
+
+        if (!selected) {
+            console.log('\nHelp selection cancelled.\n');
+            return;
+        }
+
+        // Display the selected help topic
+        const topicName = selected.type === 'command'
+            ? selected.name.slice(1) // Remove leading /
+            : selected.name;
+
+        const helpText = showHelp(topicName);
+        console.log(helpText);
+
+        // Save to history
+        this.historyManager.add(`/help ${topicName}`);
     }
 }
 

@@ -21,7 +21,7 @@
         "test:all": "node tests/run-all.mjs"
     },
     "dependencies": {
-        "achilles-agent-lib": "file:../AchillesAgentLib"
+        "achilles-agent-lib": "github:OutfinityResearch/achillesAgentLib"
     },
     "devDependencies": {},
     "engines": {
