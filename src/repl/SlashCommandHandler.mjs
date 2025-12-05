@@ -72,11 +72,18 @@ export class SlashCommandHandler {
             needsSkillArg: true,
         },
         'test': {
-            skill: 'test-code',
-            usage: '/test <skill-name>',
-            description: 'Test generated code for a skill',
-            args: 'required',
-            needsSkillArg: true,
+            skill: null, // Special handling - shows picker if no args, runs test-code if skill specified
+            usage: '/test [skill-name]',
+            description: 'Test skill code (shows picker if no skill specified)',
+            args: 'optional',
+            needsSkillArg: false,
+        },
+        'run-tests': {
+            skill: 'run-tests',
+            usage: '/run-tests [skill-name|all]',
+            description: 'Run .tests.mjs files (all = run all tests)',
+            args: 'optional',
+            needsSkillArg: false,
         },
         'refine': {
             skill: 'skill-refiner',
@@ -203,6 +210,32 @@ export class SlashCommandHandler {
                 handled: true,
                 error: `Usage: ${cmdDef.usage}\n  ${cmdDef.description}`,
             };
+        }
+
+        // Handle /test specially - shows picker if no args, runs test-code if skill specified
+        if (command === 'test') {
+            if (!args) {
+                // No args - show interactive test picker
+                // Return special signal for REPLSession to handle the picker
+                return {
+                    handled: true,
+                    showTestPicker: true,
+                };
+            }
+
+            // Args provided - run test-code for the specified skill
+            try {
+                const result = await this.executeSkill('test-code', args, options);
+                return {
+                    handled: true,
+                    result: formatSlashResult(result),
+                };
+            } catch (error) {
+                return {
+                    handled: true,
+                    error: error.message,
+                };
+            }
         }
 
         // Handle /exec specially - it executes any skill

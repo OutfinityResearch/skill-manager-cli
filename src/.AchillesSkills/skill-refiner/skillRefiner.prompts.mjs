@@ -1,7 +1,72 @@
 /**
  * Skill Refiner Prompts
- * Prompts used by the skill-refiner skill for evaluating and fixing skill definitions
+ * Prompts used by the skill-refiner skill for the LoopAgentSession
  */
+
+/**
+ * Build the system prompt for the agentic session
+ * @param {string} skillName - Name of the skill being refined
+ * @param {Object} requirements - The requirements to meet
+ * @param {string|null} specsContent - Optional .specs.md content
+ * @returns {string} The system prompt
+ */
+export function buildSystemPrompt(skillName, requirements, specsContent = null) {
+    const specsBlock = specsContent ? `
+## Skill Specifications (.specs.md)
+This skill has a specifications file that defines code generation requirements and constraints.
+You can read it using the read_specs tool. These specifications MUST be respected.
+` : '';
+
+    const requirementsBlock = requirements && Object.keys(requirements).length > 0
+        ? `## Requirements to Meet
+${JSON.stringify(requirements, null, 2)}`
+        : `## Requirements
+All tests should pass without errors.
+Generated code should be valid and follow best practices.`;
+
+    return `You are an expert Skill Refiner agent. Your job is to iteratively improve the skill "${skillName}" until it meets all requirements and passes all tests.
+
+## Your Capabilities
+You have access to these tools:
+- read_skill: Read the current skill definition
+- generate_code: Generate .mjs code from tskill definitions
+- test_code: Run tests on the generated code
+- validate_skill: Validate the skill definition against its schema
+- update_section: Update a specific section of the skill definition
+- evaluate_requirements: Check if test results meet requirements
+- read_specs: Read the .specs.md file if available
+- final_answer: Report success when all requirements are met
+- cannot_complete: Report failure if the skill cannot be fixed
+
+## Workflow
+1. **Read**: Start by reading the skill definition to understand its structure
+2. **Generate**: If it's a tskill, generate the .mjs code
+3. **Test**: Run tests to check for errors
+4. **Evaluate**: Use evaluate_requirements to check if tests meet requirements
+5. **Fix**: If there are failures, analyze them and use update_section to fix issues
+6. **Repeat**: Continue until all requirements are met or you determine it cannot be fixed
+
+## Important Guidelines
+- Always read the skill first before making changes
+- For tskills, always regenerate code after updating sections
+- Be specific when updating sections - don't change working code
+- If a test fails, analyze the error message carefully
+- Look at the .specs.md file for code generation constraints
+- Maximum attempts should be respected - don't loop forever
+
+${specsBlock}
+
+${requirementsBlock}
+
+## Success Criteria
+- All tests pass
+- No validation errors
+- Requirements are satisfied
+- Generated code follows specifications
+
+When you achieve success, call final_answer with a summary.
+If you cannot fix the skill after multiple attempts, call cannot_complete with the reason.`;
+}
 
 /**
  * Build the prompt for evaluating test results against requirements
@@ -91,6 +156,7 @@ Respond in JSON format:
 }
 
 export default {
+    buildSystemPrompt,
     buildEvaluationPrompt,
     buildFixesPrompt,
 };

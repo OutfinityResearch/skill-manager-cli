@@ -11,6 +11,8 @@ import {
     buildOskillCodeGenPrompt,
     buildCskillCodeGenPrompt,
 } from './codeGeneration.prompts.mjs';
+import { runTestFile } from '../../lib/testDiscovery.mjs';
+import { formatTestResult } from '../../ui/TestResultFormatter.mjs';
 
 const SUPPORTED_TYPES = ['tskill', 'iskill', 'oskill', 'cskill'];
 
@@ -114,13 +116,41 @@ export async function action(recursiveSkilledAgent, prompt) {
 
         fs.writeFileSync(outPath, generatedCode, 'utf8');
 
-        return [
+        const outputLines = [
             `Generated: ${outFileName}`,
             `Path: ${outPath}`,
             `Size: ${generatedCode.length} bytes`,
-            '',
-            'Use test-code to verify the generated code works correctly.',
-        ].join('\n');
+        ];
+
+        // Auto-run tests if .tests.mjs exists
+        const testFile = path.join(skillDir, '.tests.mjs');
+        if (fs.existsSync(testFile)) {
+            outputLines.push('');
+            outputLines.push('[Auto-running tests...]');
+
+            try {
+                const testResult = await runTestFile(testFile, {
+                    timeout: 30000,
+                    verbose: false,
+                });
+
+                // Add skill info to result for formatting
+                const fullResult = {
+                    skillName,
+                    skillType,
+                    ...testResult,
+                };
+
+                outputLines.push(formatTestResult(fullResult));
+            } catch (testError) {
+                outputLines.push(`Test error: ${testError.message}`);
+            }
+        } else {
+            outputLines.push('');
+            outputLines.push('No .tests.mjs file found. Use /test to create and run tests.');
+        }
+
+        return outputLines.join('\n');
     } catch (error) {
         return `Error generating code: ${error.message}`;
     }

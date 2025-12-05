@@ -7,7 +7,7 @@
 
 import path from 'node:path';
 import { createSpinner } from '../ui/spinner.mjs';
-import { buildCommandList } from '../ui/CommandSelector.mjs';
+import { buildCommandList, showTestSelector } from '../ui/CommandSelector.mjs';
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
 import { summarizeResult } from '../ui/ResultFormatter.mjs';
 import { HistoryManager } from './HistoryManager.mjs';
@@ -15,6 +15,8 @@ import { renderMarkdown } from '../ui/MarkdownRenderer.mjs';
 import { InteractivePrompt } from './InteractivePrompt.mjs';
 import { QuickCommands } from './QuickCommands.mjs';
 import { NaturalLanguageProcessor } from './NaturalLanguageProcessor.mjs';
+import { discoverSkillTests, runTestFile } from '../lib/testDiscovery.mjs';
+import { formatTestResult } from '../ui/TestResultFormatter.mjs';
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -275,6 +277,10 @@ export class REPLSession {
                 if (result.toggleMarkdown) {
                     this.markdownEnabled = !this.markdownEnabled;
                     spinner.succeed(`Markdown rendering ${this.markdownEnabled ? 'enabled' : 'disabled'}`);
+                // Handle /test with no args - show interactive picker
+                } else if (result.showTestPicker) {
+                    spinner.stop();
+                    await this._handleTestPicker();
                 } else if (result.error) {
                     spinner.fail(result.error);
                 } else if (result.result) {
@@ -297,6 +303,59 @@ export class REPLSession {
         }
 
         return false;
+    }
+
+    /**
+     * Handle interactive test picker when /test is called without args.
+     * @private
+     */
+    async _handleTestPicker() {
+        // Discover available tests
+        const tests = discoverSkillTests(this.agent);
+
+        if (tests.length === 0) {
+            console.log('\nNo tests found. Create .tests.mjs files in skill directories to add tests.\n');
+            return;
+        }
+
+        console.log(`\nFound ${tests.length} test(s). Select one to run:\n`);
+
+        // Show interactive test selector
+        const selected = await showTestSelector(tests, {
+            prompt: 'Select test> ',
+            maxVisible: 10,
+        });
+
+        if (!selected) {
+            console.log('\nTest selection cancelled.\n');
+            return;
+        }
+
+        // Run the selected test
+        const spinner = createSpinner(`Running tests for ${selected.skillName}...`);
+
+        try {
+            const testResult = await runTestFile(selected.testFile, {
+                timeout: 30000,
+                verbose: false,
+            });
+
+            // Add skill info to result
+            const fullResult = {
+                ...selected,
+                ...testResult,
+            };
+
+            spinner.succeed(`Tests for ${selected.skillName} complete`);
+            console.log('-'.repeat(60));
+            console.log(formatTestResult(fullResult));
+            console.log('-'.repeat(60) + '\n');
+
+            // Save to history
+            this.historyManager.add(`/test ${selected.skillName}`);
+        } catch (error) {
+            spinner.fail(`Test error: ${error.message}`);
+        }
     }
 }
 

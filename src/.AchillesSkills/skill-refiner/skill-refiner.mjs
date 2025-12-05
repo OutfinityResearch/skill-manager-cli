@@ -1,25 +1,26 @@
 /**
  * Skill Refiner - Iteratively improves skill definitions until requirements are met
  *
- * This orchestrator implements the loop:
- * read skill → generate code → test → evaluate → fix → repeat
+ * Uses LoopAgentSession for intelligent, LLM-driven refinement loop.
+ * The agent decides when to read, generate, test, evaluate, and fix.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { detectSkillType, parseSkillSections, loadSpecsContent } from '../../schemas/skillSchemas.mjs';
-import { buildEvaluationPrompt, buildFixesPrompt } from './skillRefiner.prompts.mjs';
+import { LoopAgentSession } from 'achilles-agent-lib/LLMAgents/AgenticSession.mjs';
+import { detectSkillType, loadSpecsContent } from '../../schemas/skillSchemas.mjs';
+import { buildSystemPrompt, buildEvaluationPrompt } from './skillRefiner.prompts.mjs';
+import { runTestFile } from '../../lib/testDiscovery.mjs';
+import { formatTestResult } from '../../ui/TestResultFormatter.mjs';
 
 /**
  * Parse input to extract skill name, requirements, and options
  */
 function parseInput(prompt) {
     if (typeof prompt === 'string') {
-        // Try to parse as JSON
         try {
             return JSON.parse(prompt);
         } catch (e) {
-            // Treat as skill name with default options
             return { skillName: prompt.trim() };
         }
     }
@@ -27,59 +28,251 @@ function parseInput(prompt) {
 }
 
 /**
- * Evaluate test results using LLM
+ * Build tools for the agentic session
  */
-async function evaluateWithLLM(testResult, requirements, llmAgent, specsContent = null) {
-    const evalPrompt = buildEvaluationPrompt(testResult, requirements, specsContent);
+function buildTools(recursiveSkilledAgent, skillName, skillInfo, requirements, specsContent) {
+    const filePath = skillInfo.filePath;
+    const skillDir = skillInfo.record?.skillDir || path.dirname(filePath);
 
-    try {
-        const response = await llmAgent.executePrompt(evalPrompt, {
-            responseShape: 'json',
-            mode: 'fast',
-        });
+    return {
+        'read_skill': {
+            description: `Read the current skill definition for "${skillName}". Returns the full content of the skill file.`,
+            handler: async (agent, input) => {
+                try {
+                    const content = fs.readFileSync(filePath, 'utf8');
+                    const skillType = detectSkillType(content);
+                    return JSON.stringify({
+                        success: true,
+                        skillName,
+                        skillType,
+                        filePath,
+                        content,
+                        specsAvailable: !!specsContent
+                    });
+                } catch (error) {
+                    return JSON.stringify({
+                        success: false,
+                        error: `Failed to read skill: ${error.message}`
+                    });
+                }
+            }
+        },
 
-        if (typeof response === 'string') {
-            return JSON.parse(response);
+        'generate_code': {
+            description: `Generate .mjs code from the tskill definition. Only use for tskill type skills.`,
+            handler: async (agent, input) => {
+                try {
+                    const result = await recursiveSkilledAgent.executePrompt(skillName, {
+                        skillName: 'generate-code',
+                    });
+
+                    // Extract meaningful result
+                    const output = result?.result?.output || result?.result || result;
+                    return JSON.stringify({
+                        success: true,
+                        message: 'Code generated successfully',
+                        output: typeof output === 'string' ? output.slice(0, 500) : output
+                    });
+                } catch (error) {
+                    return JSON.stringify({
+                        success: false,
+                        error: `Code generation failed: ${error.message}`
+                    });
+                }
+            }
+        },
+
+        'test_code': {
+            description: `Test the generated code for "${skillName}". Returns test results including any errors.`,
+            handler: async (agent, input) => {
+                try {
+                    const testInput = requirements?.testInput || {};
+                    const result = await recursiveSkilledAgent.executePrompt(
+                        JSON.stringify({ skillName, testInput }),
+                        { skillName: 'test-code' }
+                    );
+
+                    const output = result?.result?.output || result?.result || result;
+                    return JSON.stringify({
+                        success: true,
+                        testResult: typeof output === 'string' ? output : JSON.stringify(output)
+                    });
+                } catch (error) {
+                    return JSON.stringify({
+                        success: false,
+                        error: `Test failed: ${error.message}`
+                    });
+                }
+            }
+        },
+
+        'run_skill_tests': {
+            description: `Run the .tests.mjs file for "${skillName}" if it exists. Returns structured test results with pass/fail counts and errors. Prefer this over test_code when a .tests.mjs file exists.`,
+            handler: async (agent, input) => {
+                const testFile = path.join(skillDir, '.tests.mjs');
+
+                if (!fs.existsSync(testFile)) {
+                    return JSON.stringify({
+                        success: false,
+                        hasTestFile: false,
+                        message: `No .tests.mjs file found for "${skillName}". Create one or use test_code instead.`
+                    });
+                }
+
+                try {
+                    const result = await runTestFile(testFile, {
+                        timeout: 30000,
+                        verbose: true,
+                    });
+
+                    // Format for LLM consumption
+                    const content = detectSkillType(fs.readFileSync(filePath, 'utf8'));
+
+                    return JSON.stringify({
+                        success: result.success,
+                        hasTestFile: true,
+                        skillName,
+                        skillType: content,
+                        passed: result.passed || 0,
+                        failed: result.failed || 0,
+                        duration: result.duration,
+                        errors: result.errors || [],
+                        output: result.output,
+                        formatted: formatTestResult({
+                            skillName,
+                            skillType: content,
+                            ...result
+                        })
+                    });
+                } catch (error) {
+                    return JSON.stringify({
+                        success: false,
+                        hasTestFile: true,
+                        error: `Test execution failed: ${error.message}`
+                    });
+                }
+            }
+        },
+
+        'validate_skill': {
+            description: `Validate the skill definition against its schema. Returns validation errors if any.`,
+            handler: async (agent, input) => {
+                try {
+                    const result = await recursiveSkilledAgent.executePrompt(skillName, {
+                        skillName: 'validate-skill',
+                    });
+
+                    const output = result?.result?.output || result?.result || result;
+                    return JSON.stringify({
+                        success: true,
+                        validation: typeof output === 'string' ? output : JSON.stringify(output)
+                    });
+                } catch (error) {
+                    return JSON.stringify({
+                        success: false,
+                        error: `Validation failed: ${error.message}`
+                    });
+                }
+            }
+        },
+
+        'update_section': {
+            description: `Update a specific section of the skill definition. Input must be JSON: {"section": "Section Name", "content": "new content"}`,
+            handler: async (agent, input) => {
+                try {
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(input);
+                    } catch {
+                        return JSON.stringify({
+                            success: false,
+                            error: 'Input must be valid JSON with "section" and "content" fields'
+                        });
+                    }
+
+                    const { section, content } = parsed;
+                    if (!section || !content) {
+                        return JSON.stringify({
+                            success: false,
+                            error: 'Both "section" and "content" are required'
+                        });
+                    }
+
+                    const result = await recursiveSkilledAgent.executePrompt(
+                        JSON.stringify({ skillName, section, content }),
+                        { skillName: 'update-section' }
+                    );
+
+                    const output = result?.result?.output || result?.result || result;
+                    return JSON.stringify({
+                        success: true,
+                        message: `Updated section "${section}"`,
+                        output: typeof output === 'string' ? output : JSON.stringify(output)
+                    });
+                } catch (error) {
+                    return JSON.stringify({
+                        success: false,
+                        error: `Update failed: ${error.message}`
+                    });
+                }
+            }
+        },
+
+        'evaluate_requirements': {
+            description: `Evaluate if the current test results meet the requirements. Input: the test result to evaluate.`,
+            handler: async (agent, input) => {
+                const llmAgent = recursiveSkilledAgent?.llmAgent;
+                if (!llmAgent) {
+                    return JSON.stringify({
+                        success: false,
+                        error: 'LLM agent not available for evaluation'
+                    });
+                }
+
+                const evalPrompt = buildEvaluationPrompt(input, requirements, specsContent);
+
+                try {
+                    const response = await llmAgent.executePrompt(evalPrompt, {
+                        responseShape: 'json',
+                        mode: 'fast',
+                    });
+
+                    const evaluation = typeof response === 'string' ? JSON.parse(response) : response;
+                    return JSON.stringify({
+                        success: true,
+                        evaluation
+                    });
+                } catch (error) {
+                    return JSON.stringify({
+                        success: false,
+                        error: `Evaluation failed: ${error.message}`
+                    });
+                }
+            }
+        },
+
+        'read_specs': {
+            description: `Read the .specs.md file for "${skillName}" if available. Contains code generation requirements and constraints.`,
+            handler: async (agent, input) => {
+                if (!specsContent) {
+                    return JSON.stringify({
+                        success: false,
+                        message: 'No .specs.md file available for this skill'
+                    });
+                }
+                return JSON.stringify({
+                    success: true,
+                    specs: specsContent
+                });
+            }
         }
-        return response;
-    } catch (error) {
-        return {
-            success: false,
-            failures: [{ section: 'Evaluation', field: null, reason: error.message }],
-            suggestions: ['Check LLM connectivity'],
-        };
-    }
+    };
 }
 
 /**
- * Generate section updates based on failures
- */
-async function generateFixes(skillContent, failures, history, llmAgent, specsContent = null) {
-    const fixesPrompt = buildFixesPrompt(skillContent, failures, history, specsContent);
-
-    try {
-        const response = await llmAgent.executePrompt(fixesPrompt, {
-            responseShape: 'json',
-            mode: 'deep',
-        });
-
-        if (typeof response === 'string') {
-            return JSON.parse(response);
-        }
-        return response;
-    } catch (error) {
-        return {
-            fixes: [],
-            explanation: `Failed to generate fixes: ${error.message}`,
-        };
-    }
-}
-
-/**
- * Main action function for the skill refiner
+ * Main action function for the skill refiner using LoopAgentSession
  */
 export async function action(recursiveSkilledAgent, prompt) {
-    // Get llmAgent from the recursiveSkilledAgent
     const llmAgent = recursiveSkilledAgent?.llmAgent;
 
     // Parse input
@@ -87,7 +280,6 @@ export async function action(recursiveSkilledAgent, prompt) {
         skillName,
         requirements = {},
         maxIterations = 5,
-        evaluator = 'llm',
     } = parseInput(prompt);
 
     if (!skillName) {
@@ -98,153 +290,98 @@ export async function action(recursiveSkilledAgent, prompt) {
         return 'Error: LLM agent not available for skill refinement';
     }
 
-    // Use findSkillFile to locate the skill
+    // Find the skill
     const skillInfo = recursiveSkilledAgent?.findSkillFile?.(skillName);
-
     if (!skillInfo) {
         return `Error: Skill "${skillName}" not found`;
     }
 
-    const filePath = skillInfo.filePath;
-    const skillDir = skillInfo.record?.skillDir || path.dirname(filePath);
-
-    // Load specs content if available
+    const skillDir = skillInfo.record?.skillDir || path.dirname(skillInfo.filePath);
     const specsContent = loadSpecsContent(skillDir);
 
-    const history = [];
-    const output = [];
+    // Build tools
+    const tools = buildTools(recursiveSkilledAgent, skillName, skillInfo, requirements, specsContent);
 
-    output.push(`Starting refinement of "${skillName}"`);
-    output.push(`Max iterations: ${maxIterations}`);
-    output.push(`Requirements: ${JSON.stringify(requirements)}`);
-    output.push('');
+    // Build system prompt
+    const systemPrompt = buildSystemPrompt(skillName, requirements, specsContent);
 
-    for (let iteration = 0; iteration < maxIterations; iteration++) {
-        output.push(`--- Iteration ${iteration + 1}/${maxIterations} ---`);
+    // Create agentic session
+    const session = new LoopAgentSession({
+        agent: llmAgent,
+        tools,
+        options: {
+            maxStepsPerTurn: maxIterations * 4, // Allow multiple tool calls per iteration
+            maxErrors: 5,
+            mode: 'deep',
+            systemPrompt,
+        }
+    });
 
-        // 1. Read current skill content
-        let skillContent;
-        try {
-            skillContent = fs.readFileSync(filePath, 'utf8');
-        } catch (error) {
-            output.push(`Error reading skill: ${error.message}`);
-            break;
+    console.log(`[SkillRefiner] Starting refinement of "${skillName}"`);
+    console.log(`[SkillRefiner] Max iterations: ${maxIterations}`);
+    console.log(`[SkillRefiner] Requirements: ${JSON.stringify(requirements)}`);
+
+    try {
+        // Run the agentic session
+        const initialPrompt = `Refine the skill "${skillName}" until it meets all requirements and tests pass.
+
+Your workflow should be:
+1. First, read_skill to understand the current definition
+2. If it's a tskill, use generate_code to create the .mjs file
+3. Run tests using either:
+   - run_skill_tests (preferred) - runs .tests.mjs file if available
+   - test_code - runs basic code tests
+4. Use evaluate_requirements to check if tests meet requirements
+5. If evaluation shows failures, use update_section to fix the problematic sections
+6. Repeat steps 2-5 until all requirements are met
+
+${specsContent ? 'Note: This skill has a .specs.md file with additional requirements. Use read_specs to view them.' : ''}
+
+Requirements to meet:
+${JSON.stringify(requirements, null, 2) || 'All tests should pass without errors.'}
+
+Start by reading the skill definition.`;
+
+        const result = await session.newPrompt(initialPrompt);
+
+        // Analyze session results
+        const hasFailures = session.hasFailedTurns();
+        const toolCallCount = session.toolCalls?.length || 0;
+
+        // Build summary
+        const summary = {
+            success: !hasFailures,
+            skillName,
+            iterations: Math.ceil(toolCallCount / 4), // Approximate iterations
+            toolCalls: toolCallCount,
+            finalResult: result,
+            history: session.toolCalls?.map(tc => ({
+                tool: tc.tool,
+                result: typeof tc.result === 'string'
+                    ? tc.result.slice(0, 200)
+                    : JSON.stringify(tc.result).slice(0, 200)
+            }))
+        };
+
+        if (hasFailures) {
+            summary.reason = 'refinement_incomplete';
+            summary.failedTurns = session.failedTurns?.length || 0;
         }
 
-        const skillType = detectSkillType(skillContent);
-        output.push(`Skill type: ${skillType}`);
+        console.log(`[SkillRefiner] Completed: ${summary.success ? 'SUCCESS' : 'INCOMPLETE'}`);
+        console.log(`[SkillRefiner] Tool calls: ${toolCallCount}`);
 
-        // 2. Generate code if tskill
-        let generateResult = null;
-        if (skillType === 'tskill') {
-            output.push('Generating code...');
-            try {
-                // Use the generate-code skill
-                const generateSkill = recursiveSkilledAgent?.getSkillRecord?.('generate-code');
-                if (generateSkill) {
-                    generateResult = await recursiveSkilledAgent.executePrompt(skillName, {
-                        skillName: 'generate-code',
-                    });
-                } else {
-                    // Fallback: direct generation
-                    output.push('(generate-code skill not found, skipping)');
-                }
-            } catch (error) {
-                output.push(`Code generation error: ${error.message}`);
-            }
-        }
+        return summary;
 
-        // 3. Test the code
-        let testResult = null;
-        output.push('Testing code...');
-        try {
-            const testSkill = recursiveSkilledAgent?.getSkillRecord?.('test-code');
-            if (testSkill) {
-                testResult = await recursiveSkilledAgent.executePrompt(
-                    JSON.stringify({ skillName, testInput: requirements.testInput }),
-                    { skillName: 'test-code' }
-                );
-            } else {
-                testResult = 'Test skill not available';
-            }
-            output.push(`Test result: ${typeof testResult === 'string' ? testResult.slice(0, 200) : 'OK'}`);
-        } catch (error) {
-            testResult = `Test error: ${error.message}`;
-            output.push(testResult);
-        }
-
-        // 4. Evaluate results
-        output.push('Evaluating results...');
-        const evaluation = await evaluateWithLLM(testResult, requirements, llmAgent, specsContent);
-
-        history.push({
-            iteration,
-            skillContent,
-            testResult,
-            evaluation,
-        });
-
-        // 5. Check for success
-        if (evaluation.success) {
-            output.push('SUCCESS: Requirements met!');
-            output.push('');
-            return {
-                success: true,
-                iterations: iteration + 1,
-                output: output.join('\n'),
-                history,
-            };
-        }
-
-        output.push(`Failures: ${evaluation.failures?.length || 0}`);
-        evaluation.failures?.forEach(f => {
-            output.push(`  - ${f.section || 'Unknown'}: ${f.reason}`);
-        });
-
-        // 6. Check if last iteration
-        if (iteration >= maxIterations - 1) {
-            output.push('Max iterations reached');
-            break;
-        }
-
-        // 7. Generate and apply fixes
-        output.push('Generating fixes...');
-        const fixes = await generateFixes(skillContent, evaluation.failures, history, llmAgent, specsContent);
-
-        if (!fixes.fixes || fixes.fixes.length === 0) {
-            output.push('No fixes generated, stopping');
-            break;
-        }
-
-        output.push(`Applying ${fixes.fixes.length} fix(es)...`);
-        for (const fix of fixes.fixes) {
-            if (fix.section && fix.content) {
-                // Apply fix using update-section logic
-                const { updateSkillSection } = await import('../../skillSchemas.mjs');
-                skillContent = updateSkillSection(skillContent, fix.section, fix.content);
-                output.push(`  - Fixed: ${fix.section}`);
-            }
-        }
-
-        // Write updated content
-        try {
-            fs.writeFileSync(filePath, skillContent, 'utf8');
-            output.push('Updated skill file');
-        } catch (error) {
-            output.push(`Error writing fixes: ${error.message}`);
-            break;
-        }
-
-        output.push('');
+    } catch (error) {
+        console.error(`[SkillRefiner] Error: ${error.message}`);
+        return {
+            success: false,
+            skillName,
+            error: error.message,
+            history: session.toolCalls || []
+        };
     }
-
-    return {
-        success: false,
-        iterations: history.length,
-        reason: 'max_iterations_reached',
-        output: output.join('\n'),
-        history,
-    };
 }
 
 export default action;

@@ -339,6 +339,10 @@ export async function showSkillSelector(skills, options = {}) {
         type: skill.type,
     }));
 
+    if (skillItems.length === 0) {
+        return null;
+    }
+
     return new Promise((resolve) => {
         const selector = new CommandSelector(skillItems, { maxVisible });
         selector.updateFilter(initialFilter);
@@ -436,6 +440,159 @@ export async function showSkillSelector(skills, options = {}) {
                 if (selected) {
                     cleanup();
                     resolve({ name: selected.name, type: selected.type });
+                }
+                return;
+            }
+
+            if (keyStr.length === 1 && keyStr >= ' ') {
+                currentInput += keyStr;
+                selector.updateFilter(currentInput);
+                render();
+            }
+        };
+
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', handleKey);
+
+        render();
+    });
+}
+
+/**
+ * Show an interactive test selector and return the selected test
+ *
+ * @param {Array} tests - Array of test info objects from discoverSkillTests
+ * @param {Object} options - Options
+ * @returns {Promise<{skillName: string, testFile: string}|null>} - Selected test or null if cancelled
+ */
+export async function showTestSelector(tests, options = {}) {
+    const {
+        prompt = 'Select test> ',
+        initialFilter = '',
+        maxVisible = 8,
+    } = options;
+
+    if (tests.length === 0) {
+        return null;
+    }
+
+    // Transform tests to command-like format for CommandSelector
+    const testItems = tests.map(test => ({
+        name: test.shortName || test.skillName,
+        description: `[${test.skillType}] ${test.testFile.split('/').pop()}`,
+        ...test, // Keep original test info
+    }));
+
+    return new Promise((resolve) => {
+        const selector = new CommandSelector(testItems, { maxVisible });
+        selector.updateFilter(initialFilter);
+
+        let currentInput = initialFilter;
+        let maxRenderedLines = 0;
+
+        process.stdout.write(ANSI.HIDE_CURSOR);
+
+        const clearDisplay = () => {
+            if (maxRenderedLines === 0) return;
+
+            for (let i = 0; i < maxRenderedLines; i++) {
+                process.stdout.write(`\n${ANSI.CLEAR_LINE}`);
+            }
+            for (let i = 0; i < maxRenderedLines; i++) {
+                process.stdout.write(ANSI.MOVE_UP);
+            }
+            process.stdout.write(`\r${ANSI.CLEAR_LINE}`);
+        };
+
+        const render = () => {
+            clearDisplay();
+
+            process.stdout.write(`${prompt}${currentInput}`);
+
+            const lines = selector.render();
+            lines.forEach(line => {
+                process.stdout.write(`\n${ANSI.CLEAR_LINE}${line}`);
+            });
+
+            if (lines.length > maxRenderedLines) {
+                maxRenderedLines = lines.length;
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                process.stdout.write(ANSI.MOVE_UP);
+            }
+            process.stdout.write(`\r${ANSI.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+        };
+
+        const cleanup = () => {
+            clearDisplay();
+            process.stdout.write(ANSI.SHOW_CURSOR);
+            process.stdin.setRawMode(false);
+            process.stdin.removeListener('data', handleKey);
+        };
+
+        const handleKey = (key) => {
+            const keyStr = key.toString();
+
+            if (keyStr === '\x1b[A') {
+                selector.moveUp();
+                render();
+                return;
+            }
+
+            if (keyStr === '\x1b[B') {
+                selector.moveDown();
+                render();
+                return;
+            }
+
+            if (keyStr === '\r' || keyStr === '\n') {
+                const selected = selector.getSelected();
+                cleanup();
+                if (selected) {
+                    resolve({
+                        skillName: selected.skillName,
+                        shortName: selected.shortName,
+                        skillType: selected.skillType,
+                        testFile: selected.testFile,
+                        skillDir: selected.skillDir,
+                    });
+                } else {
+                    resolve(null);
+                }
+                return;
+            }
+
+            if (keyStr === '\x1b' || keyStr === '\x03') {
+                cleanup();
+                resolve(null);
+                return;
+            }
+
+            if (keyStr === '\x7f' || keyStr === '\b') {
+                if (currentInput.length > 0) {
+                    currentInput = currentInput.slice(0, -1);
+                    selector.updateFilter(currentInput);
+                    render();
+                } else {
+                    cleanup();
+                    resolve(null);
+                }
+                return;
+            }
+
+            if (keyStr === '\t') {
+                const selected = selector.getSelected();
+                if (selected) {
+                    cleanup();
+                    resolve({
+                        skillName: selected.skillName,
+                        shortName: selected.shortName,
+                        skillType: selected.skillType,
+                        testFile: selected.testFile,
+                        skillDir: selected.skillDir,
+                    });
                 }
                 return;
             }
