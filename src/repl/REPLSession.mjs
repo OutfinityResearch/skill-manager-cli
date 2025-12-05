@@ -385,10 +385,16 @@ export class REPLSession {
         console.log(`\nFound ${tests.length} test(s). Select one to run:\n`);
 
         // Show interactive test selector
-        const selected = await showTestSelector(options, {
-            prompt: 'Select test> ',
-            maxVisible: 10,
-        });
+        let selected;
+        try {
+            selected = await showTestSelector(options, {
+                prompt: 'Select test> ',
+                maxVisible: 10,
+            });
+        } catch (error) {
+            console.error(`\nError showing test selector: ${error.message}\n`);
+            return;
+        }
 
         if (!selected) {
             console.log('\nTest selection cancelled.\n');

@@ -480,7 +480,7 @@ export async function showTestSelector(tests, options = {}) {
     // Transform tests to command-like format for CommandSelector
     const testItems = tests.map(test => ({
         name: test.shortName || test.skillName,
-        description: `[${test.skillType}] ${test.testFile.split('/').pop()}`,
+        description: test.description || (test.testFile ? `[${test.skillType}] ${test.testFile.split('/').pop()}` : `[${test.skillType}]`),
         ...test, // Keep original test info
     }));
 
