@@ -106,6 +106,20 @@ export class SlashCommandHandler {
             args: 'required',
             needsSkillArg: true,
         },
+        'specs': {
+            skill: 'read-specs',
+            usage: '/specs <skill-name>',
+            description: 'Read a skill\'s .specs.md file',
+            args: 'required',
+            needsSkillArg: true,
+        },
+        'specs-write': {
+            skill: 'write-specs',
+            usage: '/specs-write <skill-name> [content]',
+            description: 'Create/update a skill\'s .specs.md file',
+            args: 'required',
+            needsSkillArg: true,
+        },
     };
 
     /**
@@ -272,7 +286,7 @@ export class SlashCommandHandler {
                 const argPrefix = args.toLowerCase();
 
                 // For commands that take skill names, suggest user skills
-                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'preview'].includes(command)) {
+                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'preview', 'specs', 'specs-write'].includes(command)) {
                     const skills = this.getUserSkills();
                     const matchingSkills = skills
                         .map(s => s.shortName || s.name)
@@ -391,6 +405,10 @@ Code Generation:
   /test <skill>          Test generated code
   /refine <skill>        Iteratively improve until tests pass
 
+Specifications:
+  /specs <skill>         Read a skill's .specs.md file
+  /specs-write <skill>   Create/update .specs.md (generates template if no content)
+
 Editing:
   /update <skill> <section>  Update a specific section
   /preview <skill>           Preview pending changes
@@ -413,6 +431,8 @@ Examples:
   /read my-skill         Read my-skill definition
   /write inventory tskill Create new tskill called inventory
   /generate equipment    Generate code for equipment tskill
+  /specs equipment       View equipment's .specs.md
+  /specs-write my-skill  Generate specs template for my-skill
   /exec list-skills      Execute list-skills directly
 `);
     }

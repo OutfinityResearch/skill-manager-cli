@@ -1,10 +1,125 @@
 /**
  * Code Generation Prompts
  * Prompts used by the generate-code skill for generating .mjs code from skill definitions
+ *
+ * This module is project-agnostic. Skills can define their own code generation
+ * requirements in their .specs.md files using a "## Code Generation Prompt" section.
  */
 
 /**
+ * Extract code generation prompt from .specs.md content
+ *
+ * The .specs.md file can include a "## Code Generation Prompt" section that contains
+ * the full prompt template for generating code for this specific skill.
+ *
+ * Template variables supported:
+ * - {{skillName}} - The skill name
+ * - {{entityName}} - Entity name extracted from skill name
+ * - {{content}} - The full skill definition content
+ * - {{sections}} - JSON of parsed sections (for advanced use)
+ *
+ * @param {string} specsContent - The .specs.md file content
+ * @returns {string|null} The code generation prompt template or null
+ */
+function extractCodeGenPromptFromSpecs(specsContent) {
+    if (!specsContent) return null;
+
+    // Look for ## Code Generation Prompt section
+    const promptMatch = specsContent.match(
+        /##\s+Code\s+Generation\s+Prompt\s*\n([\s\S]*?)(?=\n##\s+|$)/i
+    );
+
+    if (promptMatch) {
+        return promptMatch[1].trim();
+    }
+
+    return null;
+}
+
+/**
+ * Extract validation requirements from .specs.md content
+ *
+ * @param {string} specsContent - The .specs.md file content
+ * @returns {Object|null} Validation requirements or null
+ */
+export function extractValidationRequirements(specsContent) {
+    if (!specsContent) return null;
+
+    // Look for ## Validation Requirements section
+    const validationMatch = specsContent.match(
+        /##\s+Validation\s+Requirements\s*\n([\s\S]*?)(?=\n##\s+|$)/i
+    );
+
+    if (validationMatch) {
+        const content = validationMatch[1].trim();
+        // Parse requirements (simple line-based format)
+        const requirements = {
+            requiredExports: [],
+            requiredFields: [],
+            customRules: [],
+        };
+
+        const lines = content.split('\n');
+        let currentSection = null;
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('### Required Exports')) {
+                currentSection = 'requiredExports';
+            } else if (trimmed.startsWith('### Required Fields')) {
+                currentSection = 'requiredFields';
+            } else if (trimmed.startsWith('### Custom Rules')) {
+                currentSection = 'customRules';
+            } else if (trimmed.startsWith('- ') && currentSection) {
+                requirements[currentSection].push(trimmed.slice(2));
+            }
+        }
+
+        return requirements;
+    }
+
+    return null;
+}
+
+/**
+ * Apply template variables to a prompt template
+ *
+ * @param {string} template - The prompt template with {{variable}} placeholders
+ * @param {Object} vars - Variables to substitute
+ * @returns {string} The processed prompt
+ */
+function applyTemplateVars(template, vars) {
+    let result = template;
+
+    for (const [key, value] of Object.entries(vars)) {
+        const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+        const stringValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
+        result = result.replace(placeholder, stringValue);
+    }
+
+    return result;
+}
+
+/**
+ * Extract entity name from skill name
+ * @param {string} skillName - The skill name
+ * @returns {string} The entity name
+ */
+function extractEntityName(skillName) {
+    return skillName
+        .replace(/-skill.*$/, '')
+        .replace(/-tskill$/, '')
+        .replace(/-dbtable$/, '')
+        .toLowerCase();
+}
+
+/**
  * Build the prompt for code generation from a tskill definition
+ *
+ * Priority:
+ * 1. If .specs.md has a "## Code Generation Prompt" section, use that
+ * 2. Otherwise, use the generic prompt with .specs.md as context
+ *
  * @param {string} skillName - The name of the skill
  * @param {string} content - The full skill definition content
  * @param {Object} sections - Parsed sections from the skill definition
@@ -12,11 +127,36 @@
  * @returns {string} The prompt for the LLM
  */
 export function buildCodeGenPrompt(skillName, content, sections, specsContent = null) {
+    // Check if specs has a code generation prompt
+    const customPrompt = extractCodeGenPromptFromSpecs(specsContent);
+
+    if (customPrompt) {
+        // Use custom prompt from .specs.md
+        const entityName = extractEntityName(skillName);
+        return applyTemplateVars(customPrompt, {
+            skillName,
+            entityName,
+            content,
+            sections,
+        });
+    }
+
+    // Fall back to generic prompt with specs as context
+    return buildGenericTskillPrompt(skillName, content, sections, specsContent);
+}
+
+/**
+ * Generic tskill code generation prompt (project-agnostic)
+ */
+function buildGenericTskillPrompt(skillName, content, sections, specsContent = null) {
     const specsBlock = specsContent ? `
 ## Skill Specifications
+The following specifications define requirements and constraints for this skill:
+
 ${specsContent}
 
 ---
+IMPORTANT: Ensure generated code complies with all specifications above.
 ` : '';
 
     return `Generate JavaScript/ESM code for a database table skill based on this definition.

@@ -505,6 +505,138 @@ IMPORTANT: Ensure all modifications comply with the above specifications.
 `;
 }
 
+/**
+ * Extract validation requirements from .specs.md content
+ *
+ * The .specs.md file can include a "## Validation Requirements" section that defines
+ * custom validation rules for the skill.
+ *
+ * @param {string} specsContent - The .specs.md file content
+ * @returns {Object|null} Validation requirements or null
+ */
+export function extractValidationRequirements(specsContent) {
+    if (!specsContent) return null;
+
+    // Look for ## Validation Requirements section
+    const validationMatch = specsContent.match(
+        /##\s+Validation\s+Requirements\s*\n([\s\S]*?)(?=\n##\s+|$)/i
+    );
+
+    if (validationMatch) {
+        const content = validationMatch[1].trim();
+        // Parse requirements (simple line-based format)
+        const requirements = {
+            requiredExports: [],
+            requiredFields: [],
+            customRules: [],
+        };
+
+        const lines = content.split('\n');
+        let currentSection = null;
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('### Required Exports')) {
+                currentSection = 'requiredExports';
+            } else if (trimmed.startsWith('### Required Fields')) {
+                currentSection = 'requiredFields';
+            } else if (trimmed.startsWith('### Custom Rules')) {
+                currentSection = 'customRules';
+            } else if (trimmed.startsWith('- ') && currentSection) {
+                requirements[currentSection].push(trimmed.slice(2));
+            }
+        }
+
+        return requirements;
+    }
+
+    return null;
+}
+
+/**
+ * Validate a tskill using requirements from its .specs.md file
+ * @param {string} skillName - The skill name
+ * @param {string} content - The tskill.md content
+ * @param {string} specsContent - The .specs.md content
+ * @returns {{isValid: boolean, errors: string[], warnings: string[]}}
+ */
+export function validateTskillWithSpecs(skillName, content, specsContent = null) {
+    // First run generic validation
+    const genericResult = validateSkillContent(content, 'tskill');
+    const errors = [...genericResult.errors];
+    const warnings = [...genericResult.warnings];
+
+    // If specs has validation requirements, apply them
+    if (specsContent) {
+        const requirements = extractValidationRequirements(specsContent);
+
+        if (requirements) {
+            // Check required fields
+            for (const field of requirements.requiredFields) {
+                const fieldPattern = new RegExp(`###\\s+${field}`, 'i');
+                if (!fieldPattern.test(content)) {
+                    errors.push(`Missing required field: ### ${field}`);
+                }
+            }
+
+            // Custom rules are informational warnings
+            for (const rule of requirements.customRules) {
+                warnings.push(`Custom rule: ${rule}`);
+            }
+        }
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        detectedType: genericResult.detectedType,
+    };
+}
+
+/**
+ * Validate generated code using requirements from .specs.md
+ * @param {string} code - The generated .mjs code
+ * @param {string} skillName - The skill name
+ * @param {string} specsContent - The .specs.md content
+ * @returns {{isValid: boolean, errors: string[], warnings: string[]}}
+ */
+export function validateGeneratedCodeWithSpecs(code, skillName, specsContent = null) {
+    const errors = [];
+    const warnings = [];
+
+    if (!code || typeof code !== 'string') {
+        return { isValid: false, errors: ['Code is empty'], warnings: [] };
+    }
+
+    // Generic code validation
+    if (!code.includes('export default')) {
+        warnings.push('Missing default export');
+    }
+
+    // If specs has validation requirements, check required exports
+    if (specsContent) {
+        const requirements = extractValidationRequirements(specsContent);
+
+        if (requirements?.requiredExports) {
+            for (const exportName of requirements.requiredExports) {
+                const exportPattern = new RegExp(
+                    `export\\s+(async\\s+)?function\\s+${exportName}|export\\s+const\\s+${exportName}`
+                );
+                if (!exportPattern.test(code)) {
+                    errors.push(`Missing required export: ${exportName}`);
+                }
+            }
+        }
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+    };
+}
+
 export default {
     SKILL_TYPES,
     SKILL_TEMPLATES,
@@ -514,4 +646,8 @@ export default {
     updateSkillSection,
     loadSpecsContent,
     buildSpecsContext,
+    // Specs-based validation (uses .specs.md for custom requirements)
+    extractValidationRequirements,
+    validateTskillWithSpecs,
+    validateGeneratedCodeWithSpecs,
 };

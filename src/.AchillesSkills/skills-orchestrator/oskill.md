@@ -21,6 +21,8 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 - test-code
 - skill-refiner
 - execute-skill
+- read-specs
+- write-specs
 
 **IMPORTANT:** The "skill" field is the OPERATION to perform. The "input" field contains the TARGET skill name.
 - WRONG: {"skill": "joker", ...} ← "joker" is NOT an operation!
@@ -93,6 +95,29 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 - "generate code", "create code" → generate-code
 - "test code", "run test" → test-code
 
+**Specifications (.specs.md files):**
+- "read specs", "show specs", "view specs" → read-specs
+- "write specs", "create specs", "update specs" → write-specs
+- "specs for X" → read-specs with skill name X
+
+**Example - User says "show specs for equipment":**
+```json
+{
+  "plan": [
+    {"skill": "read-specs", "input": "equipment", "reason": "Read equipment specs"}
+  ]
+}
+```
+
+**Example - User says "create specs for my-skill":**
+```json
+{
+  "plan": [
+    {"skill": "write-specs", "input": "my-skill", "reason": "Generate specs template"}
+  ]
+}
+```
+
 **Iterative Improvement:**
 - "refine skill", "improve skill", "fix skill until" → skill-refiner
 
@@ -143,6 +168,8 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 - test-code
 - skill-refiner
 - execute-skill
+- read-specs
+- write-specs
 
 ## Intents
 - list: Show available skills in the catalog
@@ -157,6 +184,8 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 - test: Test generated code
 - refine: Iteratively improve a skill until it meets requirements
 - execute: Run a user skill with optional input
+- read-specs: View the .specs.md file for a skill
+- write-specs: Create or update a skill's .specs.md file
 
 ## Fallback-Text
 When the user's intent is unclear:
