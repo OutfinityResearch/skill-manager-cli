@@ -258,6 +258,31 @@ export class SlashCommandHandler {
             }
         }
 
+        // Handle /run-tests specially - shows picker if no args
+        if (command === 'run-tests') {
+            if (!args) {
+                // No args - show interactive test picker
+                return {
+                    handled: true,
+                    showRunTestsPicker: true,
+                };
+            }
+
+            // Args provided - run tests for the specified skill or "all"
+            try {
+                const result = await this.executeSkill('run-tests', args, options);
+                return {
+                    handled: true,
+                    result: formatSlashResult(result),
+                };
+            } catch (error) {
+                return {
+                    handled: true,
+                    error: error.message,
+                };
+            }
+        }
+
         // Execute the mapped skill
         try {
             const result = await this.executeSkill(cmdDef.skill, args || '', options);

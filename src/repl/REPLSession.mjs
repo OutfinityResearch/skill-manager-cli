@@ -15,8 +15,8 @@ import { renderMarkdown } from '../ui/MarkdownRenderer.mjs';
 import { InteractivePrompt } from './InteractivePrompt.mjs';
 import { QuickCommands } from './QuickCommands.mjs';
 import { NaturalLanguageProcessor } from './NaturalLanguageProcessor.mjs';
-import { discoverSkillTests, runTestFile } from '../lib/testDiscovery.mjs';
-import { formatTestResult } from '../ui/TestResultFormatter.mjs';
+import { discoverSkillTests, runTestFile, runTestSuite } from '../lib/testDiscovery.mjs';
+import { formatTestResult, formatSuiteResults } from '../ui/TestResultFormatter.mjs';
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -281,6 +281,10 @@ export class REPLSession {
                 } else if (result.showTestPicker) {
                     spinner.stop();
                     await this._handleTestPicker();
+                // Handle /run-tests with no args - show interactive picker
+                } else if (result.showRunTestsPicker) {
+                    spinner.stop();
+                    await this._handleRunTestsPicker();
                 } else if (result.error) {
                     spinner.fail(result.error);
                 } else if (result.result) {
@@ -355,6 +359,87 @@ export class REPLSession {
             this.historyManager.add(`/test ${selected.skillName}`);
         } catch (error) {
             spinner.fail(`Test error: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle interactive test picker when /run-tests is called without args.
+     * Shows an option to run all tests plus individual test options.
+     * @private
+     */
+    async _handleRunTestsPicker() {
+        // Discover available tests
+        const tests = discoverSkillTests(this.agent);
+
+        if (tests.length === 0) {
+            console.log('\nNo tests found. Create .tests.mjs files in skill directories to add tests.\n');
+            return;
+        }
+
+        // Add "Run All Tests" as first option
+        const options = [
+            { skillName: 'all', shortName: 'all', skillType: 'all', testFile: null, description: `Run all ${tests.length} test(s)` },
+            ...tests,
+        ];
+
+        console.log(`\nFound ${tests.length} test(s). Select one to run:\n`);
+
+        // Show interactive test selector
+        const selected = await showTestSelector(options, {
+            prompt: 'Select test> ',
+            maxVisible: 10,
+        });
+
+        if (!selected) {
+            console.log('\nTest selection cancelled.\n');
+            return;
+        }
+
+        // Run all tests or selected test
+        if (selected.skillName === 'all') {
+            const spinner = createSpinner(`Running all ${tests.length} test(s)...`);
+
+            try {
+                const suiteResult = await runTestSuite(tests, {
+                    timeout: 30000,
+                    verbose: false,
+                });
+
+                spinner.succeed('Test suite complete');
+                console.log('-'.repeat(60));
+                console.log(formatSuiteResults(suiteResult));
+                console.log('-'.repeat(60) + '\n');
+
+                // Save to history
+                this.historyManager.add('/run-tests all');
+            } catch (error) {
+                spinner.fail(`Test suite error: ${error.message}`);
+            }
+        } else {
+            const spinner = createSpinner(`Running tests for ${selected.skillName}...`);
+
+            try {
+                const testResult = await runTestFile(selected.testFile, {
+                    timeout: 30000,
+                    verbose: false,
+                });
+
+                // Add skill info to result
+                const fullResult = {
+                    ...selected,
+                    ...testResult,
+                };
+
+                spinner.succeed(`Tests for ${selected.skillName} complete`);
+                console.log('-'.repeat(60));
+                console.log(formatTestResult(fullResult));
+                console.log('-'.repeat(60) + '\n');
+
+                // Save to history
+                this.historyManager.add(`/run-tests ${selected.skillName}`);
+            } catch (error) {
+                spinner.fail(`Test error: ${error.message}`);
+            }
         }
     }
 }

@@ -18,7 +18,7 @@ import {
     discoverSkillTest,
     runTestFile,
     runTestSuite,
-} from '../../lib/testDiscovery.mjs';
+} from '../src/lib/testDiscovery.mjs';
 
 import {
     formatDuration,
@@ -26,7 +26,7 @@ import {
     formatSuiteResults,
     formatCompactResult,
     formatTestList,
-} from '../../ui/TestResultFormatter.mjs';
+} from '../src/ui/TestResultFormatter.mjs';
 
 // Test utilities
 function assertEqual(actual, expected, message = '') {
@@ -273,21 +273,26 @@ export default async function runTests() {
         assertEqual(tests, []);
     });
 
-    await test('discoverSkillTests finds tests in skill catalog', () => {
-        // Create a mock agent with skill catalog pointing to this skill's directory
+    await test('discoverSkillTests finds tests in tests folder', () => {
+        // Create a mock agent with skill catalog and context pointing to the skill-manager-cli directory
+        // The tests folder contains run-tests.tests.mjs
+        const workingDir = path.join(__dirname, '..');
         const mockAgent = {
             skillCatalog: new Map([
-                ['run-tests', {
-                    skillDir: __dirname,
+                ['run-tests-code', {
+                    skillDir: path.join(workingDir, 'src/.AchillesSkills/run-tests'),
                     shortName: 'run-tests',
-                    type: 'cskill',
+                    type: 'code',
                 }],
             ]),
+            context: { workingDir },
         };
         const tests = discoverSkillTests(mockAgent);
         assertEqual(tests.length, 1);
-        assertEqual(tests[0].skillName, 'run-tests');
-        assertEqual(tests[0].skillType, 'cskill');
+        assertEqual(tests[0].skillName, 'run-tests-code');
+        assertEqual(tests[0].shortName, 'run-tests');
+        assertEqual(tests[0].skillType, 'code');
+        assertContains(tests[0].testFile, 'run-tests.tests.mjs');
     });
 
     // ========================================================================
@@ -310,24 +315,28 @@ export default async function runTests() {
     });
 
     await test('discoverSkillTest finds test for existing skill', () => {
+        const workingDir = path.join(__dirname, '..');
         const mockAgent = {
+            context: { workingDir },
             findSkillFile: (name) => {
                 if (name === 'run-tests') {
                     return {
-                        filePath: path.join(__dirname, 'cskill.md'),
+                        filePath: path.join(workingDir, 'src/.AchillesSkills/run-tests/cskill.md'),
                         record: {
-                            skillDir: __dirname,
-                            type: 'cskill',
+                            skillDir: path.join(workingDir, 'src/.AchillesSkills/run-tests'),
+                            shortName: 'run-tests',
+                            type: 'code',
                         },
                     };
                 }
                 return null;
             },
         };
-        const test = discoverSkillTest(mockAgent, 'run-tests');
-        assertTrue(test !== null, 'Should find test');
-        assertEqual(test.skillName, 'run-tests');
-        assertContains(test.testFile, '.tests.mjs');
+        const foundTest = discoverSkillTest(mockAgent, 'run-tests');
+        assertTrue(foundTest !== null, 'Should find test');
+        assertEqual(foundTest.skillName, 'run-tests');
+        assertEqual(foundTest.shortName, 'run-tests');
+        assertContains(foundTest.testFile, 'run-tests.tests.mjs');
     });
 
     // ========================================================================
