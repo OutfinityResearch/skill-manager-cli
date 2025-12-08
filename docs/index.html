@@ -1,0 +1,2076 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap' rel='stylesheet'>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <title>Skill Manager CLI - Documentation</title>
+    <style>
+        /* ========= BASE STYLES ========= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Raleway', sans-serif;
+            background-color: #0a0a0a;
+            color: #D8D8E8;
+            line-height: 1.6;
+        }
+
+        a {
+            color: #07A5E9;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* ========= DOCUMENTATION LAYOUT ========= */
+        .docs-container {
+            display: flex;
+            min-height: 100vh;
+            background-color: #0a0a0a;
+        }
+
+        /* ========= SIDEBAR ========= */
+        .docs-sidebar {
+            width: 280px;
+            min-width: 280px;
+            background: #101010;
+            border-right: 1px solid #2E2F46;
+            padding: 2rem 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .docs-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .docs-sidebar::-webkit-scrollbar-track {
+            background: #101010;
+        }
+
+        .docs-sidebar::-webkit-scrollbar-thumb {
+            background: #2E2F46;
+            border-radius: 3px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .sidebar-title {
+            color: #07A5E9;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.5rem 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li a {
+            display: block;
+            color: #D8D8E8;
+            text-decoration: none;
+            padding: 0.5rem 1.5rem;
+            font-size: 0.95rem;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-nav li a:hover {
+            color: #07A5E9;
+            background: rgba(7, 165, 233, 0.1);
+            border-left-color: #07A5E9;
+        }
+
+        .sidebar-nav li a.active {
+            color: #07A5E9;
+            background: rgba(7, 165, 233, 0.15);
+            border-left-color: #07A5E9;
+        }
+
+        .sidebar-nav li.indent a {
+            padding-left: 2.5rem;
+            font-size: 0.9rem;
+            color: #9ca3af;
+        }
+
+        /* ========= MAIN CONTENT ========= */
+        .docs-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem 4rem 4rem;
+            max-width: 900px;
+        }
+
+        .docs-header {
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #2E2F46;
+        }
+
+        .docs-header h1 {
+            font-size: 2.5rem;
+            color: #FFFFFF;
+            margin-bottom: 1rem;
+        }
+
+        .docs-header .tagline {
+            font-size: 1.25rem;
+            color: #9ca3af;
+            line-height: 1.6;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(270deg, #222BE7 6.45%, #07A5E9 100%);
+            color: #FFFFFF;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* ========= SECTIONS ========= */
+        .doc-section {
+            margin-bottom: 4rem;
+            scroll-margin-top: 20px;
+        }
+
+        .doc-section h2 {
+            color: #FFFFFF;
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #2E2F46;
+        }
+
+        .doc-section h3 {
+            color: #07A5E9;
+            font-size: 1.25rem;
+            margin: 2rem 0 1rem;
+        }
+
+        .doc-section h4 {
+            color: #C0DEED;
+            font-size: 1.1rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .doc-section p {
+            color: #D8D8E8;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .doc-section ul, .doc-section ol {
+            color: #D8D8E8;
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .doc-section li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        /* ========= CODE BLOCKS ========= */
+        pre {
+            background: #181c2b;
+            border: 1px solid #2E2F46;
+            border-radius: 8px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+            position: relative;
+        }
+
+        pre code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(7, 165, 233, 0.15);
+            color: #07A5E9;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        /* Syntax highlighting */
+        .token-comment { color: #6b7280; }
+        .token-command { color: #07A5E9; }
+        .token-arg { color: #f472b6; }
+        .token-string { color: #34d399; }
+        .token-option { color: #fbbf24; }
+
+        /* ========= COMMAND REFERENCE BOX ========= */
+        .command-box {
+            background: #181c2b;
+            border: 1px solid #2E2F46;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .command-header {
+            background: linear-gradient(270deg, rgba(34, 43, 231, 0.3) 0%, rgba(7, 165, 233, 0.3) 100%);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #2E2F46;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .command-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+
+        .command-type {
+            font-size: 0.75rem;
+            background: rgba(7, 165, 233, 0.2);
+            color: #07A5E9;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+
+        .command-body {
+            padding: 1.5rem;
+        }
+
+        .command-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .command-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .command-section-title {
+            color: #9ca3af;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .command-section p, .command-section pre {
+            margin: 0;
+        }
+
+        .command-section code {
+            font-size: 0.85rem;
+        }
+
+        /* ========= TABLES ========= */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: #181c2b;
+            color: #07A5E9;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            border: 1px solid #2E2F46;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border: 1px solid #2E2F46;
+            color: #D8D8E8;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(24, 28, 43, 0.5);
+        }
+
+        td code {
+            font-size: 0.85rem;
+        }
+
+        /* ========= CALLOUTS ========= */
+        .callout {
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+
+        .callout-info {
+            background: rgba(7, 165, 233, 0.1);
+            border-left-color: #07A5E9;
+        }
+
+        .callout-warning {
+            background: rgba(251, 191, 36, 0.1);
+            border-left-color: #fbbf24;
+        }
+
+        .callout-tip {
+            background: rgba(52, 211, 153, 0.1);
+            border-left-color: #34d399;
+        }
+
+        .callout-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .callout-info .callout-title { color: #07A5E9; }
+        .callout-warning .callout-title { color: #fbbf24; }
+        .callout-tip .callout-title { color: #34d399; }
+
+        .callout p {
+            margin: 0;
+            color: #D8D8E8;
+        }
+
+        /* ========= SKILL TYPE CARDS ========= */
+        .skill-type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .skill-type-card {
+            background: #181c2b;
+            border: 1px solid #2E2F46;
+            border-radius: 8px;
+            padding: 1.25rem;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .skill-type-card:hover {
+            transform: translateY(-3px);
+            border-color: #07A5E9;
+        }
+
+        .skill-type-card h4 {
+            color: #07A5E9;
+            font-size: 1rem;
+            margin: 0 0 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .skill-type-card .extension {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-bottom: 0.75rem;
+        }
+
+        .skill-type-card p {
+            font-size: 0.9rem;
+            margin: 0;
+            color: #D8D8E8;
+        }
+
+        /* ========= RESPONSIVE ========= */
+        @media (max-width: 1024px) {
+            .docs-content {
+                padding: 2rem;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .docs-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .docs-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .docs-content {
+                margin-left: 0;
+                padding: 1.5rem;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                bottom: 2rem;
+                right: 2rem;
+                background: linear-gradient(270deg, #222BE7 6.45%, #07A5E9 100%);
+                color: #FFFFFF;
+                border: none;
+                border-radius: 50%;
+                width: 56px;
+                height: 56px;
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 200;
+                box-shadow: 0 4px 15px rgba(7, 165, 233, 0.4);
+            }
+
+            .docs-header h1 {
+                font-size: 2rem;
+            }
+
+            .command-box {
+                margin: 1rem -0.5rem;
+            }
+        }
+
+        @media (min-width: 901px) {
+            .mobile-menu-toggle {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="docs-container">
+        <!-- Sidebar -->
+        <aside class="docs-sidebar" id="docs-sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Getting Started</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#overview" class="active">Overview</a></li>
+                    <li><a href="#installation">Installation</a></li>
+                    <li><a href="#quickstart">Quick Start</a></li>
+                    <li><a href="#natural-language">Natural Language Usage</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Commands</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#commands-overview">Commands Overview</a></li>
+                    <li><a href="#cmd-list">/list</a></li>
+                    <li><a href="#cmd-read">/read</a></li>
+                    <li><a href="#cmd-write">/write</a></li>
+                    <li><a href="#cmd-delete">/delete</a></li>
+                    <li><a href="#cmd-validate">/validate</a></li>
+                    <li><a href="#cmd-template">/template</a></li>
+                    <li><a href="#cmd-generate">/generate</a></li>
+                    <li><a href="#cmd-test">/test</a></li>
+                    <li><a href="#cmd-refine">/refine</a></li>
+                    <li><a href="#cmd-exec">/exec</a></li>
+                    <li><a href="#cmd-specs">/specs</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Skill Types</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#skill-types">Overview</a></li>
+                    <li><a href="#tskill">tskill (Table)</a></li>
+                    <li><a href="#cskill">cskill (Code)</a></li>
+                    <li><a href="#iskill">iskill (Interactive)</a></li>
+                    <li><a href="#oskill">oskill (Orchestrator)</a></li>
+                    <li><a href="#mskill">mskill (MCP)</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Advanced</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#specs-files">Specification Files</a></li>
+                    <li><a href="#code-generation">Code Generation</a></li>
+                    <li><a href="#improving-prompts">Improving Prompts</a></li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Reference</div>
+                <ul class="sidebar-nav">
+                    <li><a href="#configuration">Configuration</a></li>
+                    <li><a href="#workflows">Workflows</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="docs-content">
+            <!-- Header -->
+            <header class="docs-header" id="overview">
+                <span class="badge">v0.1.0</span>
+                <span class="badge">Node.js &ge;18</span>
+                <h1>Skill Manager CLI</h1>
+                <p class="tagline">A command-line interface for managing, generating, testing, and refining AI skill definitions. Build powerful AI agents with a dual-interface approach combining natural language and slash commands.</p>
+            </header>
+
+            <!-- Overview Section -->
+            <section class="doc-section">
+                <h2>What is Skill Manager CLI?</h2>
+                <p>Skill Manager CLI is a powerful tool for creating and managing skill-based AI agents. It provides a complete workflow for:</p>
+                <ul>
+                    <li><strong>Creating skills</strong> - Define AI behaviors in human-readable Markdown files</li>
+                    <li><strong>Validating skills</strong> - Ensure skills conform to schema requirements</li>
+                    <li><strong>Generating code</strong> - Transform skill definitions into executable JavaScript</li>
+                    <li><strong>Testing and refining</strong> - Iteratively improve skills until they meet requirements</li>
+                </ul>
+
+                <h3>Dual Interface Design</h3>
+                <p>The CLI offers two ways to interact:</p>
+                <table>
+                    <tr>
+                        <th>Interface</th>
+                        <th>Best For</th>
+                        <th>Example</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Slash Commands</strong></td>
+                        <td>Fast, deterministic operations</td>
+                        <td><code>/list</code>, <code>/read equipment</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Natural Language</strong></td>
+                        <td>Complex workflows, exploration</td>
+                        <td>"create a validator for email addresses"</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- Installation Section -->
+            <section class="doc-section" id="installation">
+                <h2>Installation</h2>
+
+                <h3>Prerequisites</h3>
+                <ul>
+                    <li>Node.js 18.0.0 or higher</li>
+                    <li>npm or yarn package manager</li>
+                    <li>API key for at least one supported LLM provider</li>
+                </ul>
+
+                <h3>Install from npm</h3>
+                <pre><code><span class="token-command">npm</span> install -g @outfinityresearch/skill-manager-cli</code></pre>
+
+                <h3>Install from source</h3>
+                <pre><code><span class="token-command">git</span> clone https://github.com/OutfinityResearch/skill-manager-cli.git
+<span class="token-command">cd</span> skill-manager-cli
+<span class="token-command">npm</span> install
+<span class="token-command">npm</span> link</code></pre>
+
+                <h3>Environment Setup</h3>
+                <p>Set an API key for at least one of the supported LLM providers:</p>
+                <pre><code><span class="token-comment"># Choose ONE of the following providers:</span>
+
+<span class="token-comment"># OpenAI (GPT-4o, GPT-4o-mini)</span>
+<span class="token-command">export</span> OPENAI_API_KEY=<span class="token-string">"your-api-key"</span>
+
+<span class="token-comment"># Anthropic (Claude Sonnet, Claude Opus)</span>
+<span class="token-command">export</span> ANTHROPIC_API_KEY=<span class="token-string">"your-api-key"</span>
+
+<span class="token-comment"># Google (Gemini 2.5 Pro, Gemini 2.5 Flash)</span>
+<span class="token-command">export</span> GEMINI_API_KEY=<span class="token-string">"your-api-key"</span>
+
+<span class="token-comment"># OpenRouter (access to multiple models)</span>
+<span class="token-command">export</span> OPENROUTER_API_KEY=<span class="token-string">"your-api-key"</span>
+
+<span class="token-comment"># Hugging Face</span>
+<span class="token-command">export</span> HUGGINGFACE_API_KEY=<span class="token-string">"your-api-key"</span>
+
+<span class="token-comment"># Optional: Set default LLM mode</span>
+<span class="token-command">export</span> ACHILLES_ORCHESTRATOR_MODE=<span class="token-string">"deep"</span>  <span class="token-comment"># or "fast"</span></code></pre>
+            </section>
+
+            <!-- Quick Start Section -->
+            <section class="doc-section" id="quickstart">
+                <h2>Quick Start</h2>
+
+                <h3>1. Initialize a project</h3>
+                <pre><code><span class="token-command">mkdir</span> my-skills-project
+<span class="token-command">cd</span> my-skills-project
+<span class="token-command">skill-manager-cli</span></code></pre>
+                <p>This creates a <code>.AchillesSkills</code> directory for your custom skills.</p>
+
+                <h3>2. List available skills</h3>
+                <pre><code><span class="token-command">/list</span> all</code></pre>
+
+                <h3>3. Get a skill template</h3>
+                <pre><code><span class="token-command">/template</span> tskill</code></pre>
+
+                <h3>4. Create your first skill</h3>
+                <pre><code><span class="token-command">/write</span> my-validator tskill</code></pre>
+                <p>Follow the prompts to define your skill's fields, validators, and presenters.</p>
+
+                <h3>5. Validate and generate code</h3>
+                <pre><code><span class="token-command">/validate</span> my-validator
+<span class="token-command">/generate</span> my-validator
+<span class="token-command">/test</span> my-validator</code></pre>
+
+                <div class="callout callout-tip">
+                    <div class="callout-title"><i class="fas fa-lightbulb"></i> Tip</div>
+                    <p>Use <code>/refine my-validator</code> to automatically iterate on your skill until all tests pass.</p>
+                </div>
+            </section>
+
+            <!-- Natural Language Usage -->
+            <section class="doc-section" id="natural-language">
+                <h2>Natural Language Usage</h2>
+                <p>Beyond slash commands, you can interact with skill-manager-cli using natural language. The orchestrator interprets your intent and routes to the appropriate skills.</p>
+
+                <h3>Skill Management Examples</h3>
+                <pre><code><span class="token-comment"># List and explore skills</span>
+<span class="token-string">"list all skills"</span>
+<span class="token-string">"show me the available skills"</span>
+<span class="token-string">"what skills do I have?"</span>
+
+<span class="token-comment"># Read skill definitions</span>
+<span class="token-string">"read the equipment skill"</span>
+<span class="token-string">"show me how the user-validator is defined"</span>
+<span class="token-string">"what does the inventory skill do?"</span>
+
+<span class="token-comment"># Create new skills</span>
+<span class="token-string">"create a new table skill called product"</span>
+<span class="token-string">"I need a validator for customer records"</span>
+<span class="token-string">"make an orchestrator that handles inventory requests"</span></code></pre>
+
+                <h3>Code Generation Examples</h3>
+                <pre><code><span class="token-comment"># Generate and test code</span>
+<span class="token-string">"generate code for the equipment skill"</span>
+<span class="token-string">"regenerate the product validator"</span>
+<span class="token-string">"test the equipment skill"</span>
+<span class="token-string">"run tests for all skills"</span>
+
+<span class="token-comment"># Iterative improvement</span>
+<span class="token-string">"refine the equipment skill until tests pass"</span>
+<span class="token-string">"improve the product validator"</span>
+<span class="token-string">"fix the failing tests in equipment"</span></code></pre>
+
+                <h3>Multi-Turn Conversations</h3>
+                <p>The CLI supports multi-turn conversations for complex operations like creating records with validation:</p>
+
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">Example: Creating Equipment</span>
+                        <span class="command-type">Multi-Turn</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Turn 1 - User</div>
+                            <pre><code><span class="token-string">"Create a Makita drill as equipment in the Main Warehouse"</span></code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Turn 1 - System Response</div>
+                            <pre><code>Validation requires additional fields:
+
+| Field   | Current    | Required | Possible Values              |
+|---------|------------|----------|------------------------------|
+| status  | (empty)    | Yes      | Available, In Use, Faulty... |
+
+Please provide the missing values.</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Turn 2 - User</div>
+                            <pre><code><span class="token-string">"status is Available"</span></code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Turn 2 - System Response</div>
+                            <pre><code>All fields valid. Confirm creation? (yes/no)</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Turn 3 - User</div>
+                            <pre><code><span class="token-string">"yes"</span></code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>Skill Modification Examples</h3>
+                <pre><code><span class="token-comment"># Update specific sections</span>
+<span class="token-string">"add a phone_number field to the customer skill"</span>
+<span class="token-string">"update the validators section in equipment"</span>
+<span class="token-string">"change the status enumerator to include 'Retired'"</span>
+
+<span class="token-comment"># Delete skills</span>
+<span class="token-string">"delete the old-validator skill"</span>
+<span class="token-string">"remove the test-skill"</span></code></pre>
+
+                <h3>Execution Examples</h3>
+                <pre><code><span class="token-comment"># Direct skill execution</span>
+<span class="token-string">"execute the list-skills skill"</span>
+<span class="token-string">"run validate-skill on equipment"</span>
+
+<span class="token-comment"># Complex queries</span>
+<span class="token-string">"show all equipment in the Main Warehouse"</span>
+<span class="token-string">"find materials with status Available"</span>
+<span class="token-string">"list jobs assigned to area A001"</span></code></pre>
+
+                <div class="callout callout-info">
+                    <div class="callout-title"><i class="fas fa-info-circle"></i> When to Use Each Interface</div>
+                    <p><strong>Use slash commands</strong> when you know exactly what you want (faster, no LLM call).<br>
+                    <strong>Use natural language</strong> for exploration, complex operations, or when unsure of the exact command.</p>
+                </div>
+            </section>
+
+            <!-- Commands Overview -->
+            <section class="doc-section" id="commands-overview">
+                <h2>Commands Overview</h2>
+                <p>All slash commands provide fast, deterministic access to skill management operations without LLM interpretation.</p>
+
+                <table>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td><code>/list</code></td>
+                        <td>List available skills</td>
+                    </tr>
+                    <tr>
+                        <td><code>/read</code></td>
+                        <td>Read a skill definition</td>
+                    </tr>
+                    <tr>
+                        <td><code>/write</code></td>
+                        <td>Create or update a skill</td>
+                    </tr>
+                    <tr>
+                        <td><code>/delete</code></td>
+                        <td>Delete a skill</td>
+                    </tr>
+                    <tr>
+                        <td><code>/validate</code></td>
+                        <td>Validate skill structure</td>
+                    </tr>
+                    <tr>
+                        <td><code>/template</code></td>
+                        <td>Get a blank skill template</td>
+                    </tr>
+                    <tr>
+                        <td><code>/generate</code></td>
+                        <td>Generate executable code</td>
+                    </tr>
+                    <tr>
+                        <td><code>/test</code></td>
+                        <td>Test generated code</td>
+                    </tr>
+                    <tr>
+                        <td><code>/refine</code></td>
+                        <td>Iteratively improve a skill</td>
+                    </tr>
+                    <tr>
+                        <td><code>/exec</code></td>
+                        <td>Execute a skill directly</td>
+                    </tr>
+                    <tr>
+                        <td><code>/specs</code></td>
+                        <td>Read skill specifications</td>
+                    </tr>
+                    <tr>
+                        <td><code>/run-tests</code></td>
+                        <td>Run test suite files</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- Individual Command References -->
+            <section class="doc-section" id="cmd-list">
+                <h2>/list</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/list</span>
+                        <span class="command-type">Skill Management</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/list [all]</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Lists all discovered skills in the current project. By default, shows only user-defined skills. Use the <code>all</code> argument to include built-in skills.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>all</code></td>
+                                    <td>Optional. Include built-in skills in the listing.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-comment"># List user skills only</span>
+<span class="token-command">/list</span>
+
+<span class="token-comment"># Include built-in skills</span>
+<span class="token-command">/list</span> all</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-read">
+                <h2>/read</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/read</span>
+                        <span class="command-type">Skill Management</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/read &lt;skill-name&gt;</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Reads and displays the full content of a skill definition file. Shows the Markdown source with all sections.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>&lt;skill-name&gt;</code></td>
+                                    <td>Required. The name of the skill to read.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/read</span> equipment
+<span class="token-command">/read</span> user-validator</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-write">
+                <h2>/write</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/write</span>
+                        <span class="command-type">Skill Management</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/write &lt;skill-name&gt; [type]</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Creates a new skill or updates an existing one. If type is not specified for a new skill, you will be prompted to select one.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>&lt;skill-name&gt;</code></td>
+                                    <td>Required. The name for the skill.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[type]</code></td>
+                                    <td>Optional. Skill type: <code>tskill</code>, <code>cskill</code>, <code>iskill</code>, <code>oskill</code>, or <code>mskill</code>.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-comment"># Create a new table skill</span>
+<span class="token-command">/write</span> inventory tskill
+
+<span class="token-comment"># Create an orchestrator skill</span>
+<span class="token-command">/write</span> task-router oskill</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-delete">
+                <h2>/delete</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/delete</span>
+                        <span class="command-type">Skill Management</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/delete &lt;skill-name&gt;</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Permanently removes a skill directory and all its contents. This action cannot be undone.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>&lt;skill-name&gt;</code></td>
+                                    <td>Required. The name of the skill to delete.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/delete</span> old-validator</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-validate">
+                <h2>/validate</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/validate</span>
+                        <span class="command-type">Quality Assurance</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/validate &lt;skill-name&gt;</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Validates a skill definition against its schema requirements. Checks for required sections, proper formatting, and structural integrity.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>&lt;skill-name&gt;</code></td>
+                                    <td>Required. The name of the skill to validate.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/validate</span> equipment</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-template">
+                <h2>/template</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/template</span>
+                        <span class="command-type">Skill Management</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/template &lt;type&gt;</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Returns a blank template for the specified skill type. Use this to understand the required structure before creating a new skill.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>&lt;type&gt;</code></td>
+                                    <td>Required. One of: <code>tskill</code>, <code>cskill</code>, <code>iskill</code>, <code>oskill</code>, <code>mskill</code>.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/template</span> tskill
+<span class="token-command">/template</span> oskill</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-generate">
+                <h2>/generate</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/generate</span>
+                        <span class="command-type">Code Generation</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/generate &lt;skill-name&gt;</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Generates executable JavaScript code from a skill definition. Creates a <code>.generated.mjs</code> file containing validators, enumerators, presenters, and other functions based on the skill type.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>&lt;skill-name&gt;</code></td>
+                                    <td>Required. The skill to generate code for.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Generated Functions (tskill)</div>
+                            <ul>
+                                <li><code>validator_&lt;field&gt;()</code> - Field value validators</li>
+                                <li><code>enumerator_&lt;field&gt;()</code> - Enumeration options</li>
+                                <li><code>presenter_&lt;field&gt;()</code> - Display formatters</li>
+                                <li><code>selectRecords()</code> - Record filtering logic</li>
+                                <li><code>prepareRecord()</code> - Data transformation</li>
+                                <li><code>validateRecord()</code> - Full validation</li>
+                            </ul>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/generate</span> equipment</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-test">
+                <h2>/test</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/test</span>
+                        <span class="command-type">Quality Assurance</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/test [skill-name]</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Tests the generated code by importing and executing it. If no skill name is provided, displays an interactive picker to select a skill.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>[skill-name]</code></td>
+                                    <td>Optional. The skill to test. Shows picker if omitted.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/test</span> equipment
+<span class="token-command">/test</span>  <span class="token-comment"># Shows interactive picker</span></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-refine">
+                <h2>/refine</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/refine</span>
+                        <span class="command-type">Code Generation</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/refine &lt;skill-name&gt;</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Iteratively improves a skill through an automated edit-generate-test-evaluate loop. Continues until all tests pass or maximum iterations (5) is reached.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Refinement Loop</div>
+                            <ol>
+                                <li>Read current skill definition</li>
+                                <li>Validate structure</li>
+                                <li>Generate code</li>
+                                <li>Test generated code</li>
+                                <li>Evaluate against requirements</li>
+                                <li>Fix problematic sections</li>
+                                <li>Repeat until success</li>
+                            </ol>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/refine</span> equipment</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-exec">
+                <h2>/exec</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/exec</span>
+                        <span class="command-type">Execution</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/exec &lt;skill-name&gt; [input]</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Executes any skill directly with optional input. Useful for testing skill behavior or running one-off operations.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Arguments</div>
+                            <table>
+                                <tr>
+                                    <td><code>&lt;skill-name&gt;</code></td>
+                                    <td>Required. The skill to execute.</td>
+                                </tr>
+                                <tr>
+                                    <td><code>[input]</code></td>
+                                    <td>Optional. Input to pass to the skill.</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-command">/exec</span> list-skills
+<span class="token-command">/exec</span> validate-skill equipment</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="cmd-specs">
+                <h2>/specs</h2>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">/specs</span>
+                        <span class="command-type">Skill Management</span>
+                    </div>
+                    <div class="command-body">
+                        <div class="command-section">
+                            <div class="command-section-title">Synopsis</div>
+                            <pre><code>/specs &lt;skill-name&gt;
+/specs-write &lt;skill-name&gt; [content]</code></pre>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Description</div>
+                            <p>Read or write a skill's specification file (<code>.specs.md</code>). Specs files define constraints and requirements that are included in code generation context.</p>
+                        </div>
+                        <div class="command-section">
+                            <div class="command-section-title">Examples</div>
+                            <pre><code><span class="token-comment"># Read specifications</span>
+<span class="token-command">/specs</span> equipment
+
+<span class="token-comment"># Write specifications</span>
+<span class="token-command">/specs-write</span> equipment</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Skill Types Section -->
+            <section class="doc-section" id="skill-types">
+                <h2>Skill Types</h2>
+                <p>Skills are defined in Markdown files with structured sections. Each type serves a different purpose in the agent system.</p>
+
+                <div class="skill-type-grid">
+                    <div class="skill-type-card">
+                        <h4>tskill</h4>
+                        <div class="extension">.tskill.md</div>
+                        <p>Database table entities with validators, enumerators, and presenters. Generates complete CRUD operations.</p>
+                    </div>
+                    <div class="skill-type-card">
+                        <h4>cskill</h4>
+                        <div class="extension">.cskill.md</div>
+                        <p>Code skills where LLM generates implementation on-the-fly. Wrapper-only code generation.</p>
+                    </div>
+                    <div class="skill-type-card">
+                        <h4>iskill</h4>
+                        <div class="extension">.iskill.md</div>
+                        <p>Interactive conversations with multi-step input collection. Generates action functions.</p>
+                    </div>
+                    <div class="skill-type-card">
+                        <h4>oskill</h4>
+                        <div class="extension">.oskill.md</div>
+                        <p>Orchestrators that route requests to other skills. Generates routing logic.</p>
+                    </div>
+                    <div class="skill-type-card">
+                        <h4>mskill</h4>
+                        <div class="extension">.mskill.md</div>
+                        <p>MCP (Model Context Protocol) tool integrations. Optional code generation.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="doc-section" id="tskill">
+                <h2>tskill (Table Skills)</h2>
+                <p>Table skills define database entities with comprehensive validation and presentation logic.</p>
+
+                <h3>Required Sections</h3>
+                <ul>
+                    <li><strong>Summary</strong> - Brief description of the entity</li>
+                    <li><strong>Fields</strong> - Schema definition with types and constraints</li>
+                    <li><strong>Validators</strong> - Field validation rules</li>
+                    <li><strong>Enumerators</strong> - Allowed values for enumerated fields</li>
+                    <li><strong>Presenters</strong> - Display formatting rules</li>
+                </ul>
+
+                <h3>Example Structure</h3>
+                <pre><code><span class="token-comment"># equipment</span>
+
+<span class="token-comment">## Summary</span>
+Manages laboratory equipment inventory and tracking.
+
+<span class="token-comment">## Fields</span>
+- equipment_id: string (primary key)
+- name: string (required)
+- status: enum [Available, In Use, Maintenance]
+- area_id: reference (areas)
+- last_calibration: date
+
+<span class="token-comment">## Validators</span>
+- equipment_id: Must match pattern EQP-XXXX
+- name: Non-empty, max 100 characters
+
+<span class="token-comment">## Enumerators</span>
+- status: Available, In Use, Under Maintenance, Retired
+
+<span class="token-comment">## Presenters</span>
+- last_calibration: Format as "MMM DD, YYYY"</code></pre>
+            </section>
+
+            <section class="doc-section" id="cskill">
+                <h2>cskill (Code Skills)</h2>
+                <p>Code skills allow the LLM to generate implementation logic dynamically based on the prompt and context.</p>
+
+                <h3>Required Sections</h3>
+                <ul>
+                    <li><strong>Summary</strong> - What the skill does</li>
+                    <li><strong>Prompt</strong> - Instructions for the LLM</li>
+                    <li><strong>Arguments</strong> - Expected inputs</li>
+                </ul>
+
+                <h3>Example Structure</h3>
+                <pre><code><span class="token-comment"># validate-email</span>
+
+<span class="token-comment">## Summary</span>
+Validates email addresses and extracts domain information.
+
+<span class="token-comment">## Prompt</span>
+Validate the provided email address. Check format, domain
+existence, and return structured validation results.
+
+<span class="token-comment">## Arguments</span>
+- email: string - The email address to validate</code></pre>
+            </section>
+
+            <section class="doc-section" id="iskill">
+                <h2>iskill (Interactive Skills)</h2>
+                <p>Interactive skills manage multi-turn conversations to collect information from users.</p>
+
+                <h3>Required Sections</h3>
+                <ul>
+                    <li><strong>Summary</strong> - Conversation purpose</li>
+                    <li><strong>Instructions</strong> - How to guide the conversation</li>
+                    <li><strong>Input-Fields</strong> - Information to collect</li>
+                    <li><strong>Completion-Action</strong> - What happens when complete</li>
+                </ul>
+            </section>
+
+            <section class="doc-section" id="oskill">
+                <h2>oskill (Orchestrator Skills)</h2>
+                <p>Orchestrators route user requests to appropriate skills based on intent analysis.</p>
+
+                <h3>Required Sections</h3>
+                <ul>
+                    <li><strong>Summary</strong> - Orchestrator purpose</li>
+                    <li><strong>Instructions</strong> - Routing logic guidance</li>
+                    <li><strong>Allowed-Skills</strong> - List of skills this orchestrator can invoke</li>
+                </ul>
+
+                <h3>Example Structure</h3>
+                <pre><code><span class="token-comment"># task-router</span>
+
+<span class="token-comment">## Summary</span>
+Routes task management requests to appropriate handlers.
+
+<span class="token-comment">## Instructions</span>
+Analyze user intent and route to the appropriate skill.
+For creation requests, use create-task.
+For queries, use list-tasks or search-tasks.
+
+<span class="token-comment">## Allowed-Skills</span>
+- create-task
+- list-tasks
+- search-tasks
+- update-task
+- delete-task</code></pre>
+            </section>
+
+            <section class="doc-section" id="mskill">
+                <h2>mskill (MCP Skills)</h2>
+                <p>MCP skills integrate with external tools via the Model Context Protocol.</p>
+
+                <h3>Required Sections</h3>
+                <ul>
+                    <li><strong>Summary</strong> - Tool description</li>
+                    <li><strong>MCP-Server</strong> - Server configuration</li>
+                    <li><strong>Tools</strong> - Available tool definitions</li>
+                </ul>
+            </section>
+
+            <!-- Specification Files Section -->
+            <section class="doc-section" id="specs-files">
+                <h2>Specification Files (.specs.md)</h2>
+                <p>Specification files are optional Markdown documents that provide additional context, constraints, and requirements for skills. They significantly improve code generation quality by giving the LLM detailed instructions.</p>
+
+                <h3>Purpose</h3>
+                <ul>
+                    <li><strong>Guide Code Generation</strong> - Provide detailed requirements for generated code</li>
+                    <li><strong>Define Constraints</strong> - Specify validation rules, formats, and business logic</li>
+                    <li><strong>Document Implementation</strong> - Keep technical requirements separate from skill definition</li>
+                    <li><strong>Improve Consistency</strong> - Ensure generated code follows project standards</li>
+                </ul>
+
+                <h3>File Location</h3>
+                <p>Place the <code>.specs.md</code> file in the same directory as the skill definition:</p>
+                <pre><code>.AchillesSkills/
+└── equipment/
+    ├── tskill.md              <span class="token-comment"># Skill definition</span>
+    ├── tskill.generated.mjs   <span class="token-comment"># Generated code</span>
+    └── .specs.md              <span class="token-comment"># Specifications (optional)</span></code></pre>
+
+                <h3>Basic Structure</h3>
+                <pre><code><span class="token-comment"># Equipment Skill - Technical Specification</span>
+
+<span class="token-comment">## Overview</span>
+Brief description of what this skill does and its purpose.
+
+<span class="token-comment">## Schema Definition</span>
+
+<span class="token-comment">### Primary Key</span>
+| Field | Format | Description |
+|-------|--------|-------------|
+| equipment_id | EQP-#### | Auto-generated unique identifier |
+
+<span class="token-comment">### Core Fields</span>
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | String | Yes | Equipment name (2-100 chars) |
+| status | Enum | Yes | Current equipment status |
+
+<span class="token-comment">## Validation Requirements</span>
+- equipment_id must match pattern EQP-#### (e.g., EQP-0001)
+- name must be 2-100 characters
+- status must be one of: Available, In Use, Faulty
+
+<span class="token-comment">## Code Generation Prompt</span>
+Generate JavaScript/ESM code for the equipment database table skill.
+[Detailed instructions for the LLM...]</code></pre>
+
+                <h3>Key Sections</h3>
+                <table>
+                    <tr>
+                        <th>Section</th>
+                        <th>Purpose</th>
+                    </tr>
+                    <tr>
+                        <td><code>## Overview</code></td>
+                        <td>High-level description of the skill's purpose</td>
+                    </tr>
+                    <tr>
+                        <td><code>## Schema Definition</code></td>
+                        <td>Detailed field definitions with types, formats, constraints</td>
+                    </tr>
+                    <tr>
+                        <td><code>## Validation Requirements</code></td>
+                        <td>Specific validation rules and error messages</td>
+                    </tr>
+                    <tr>
+                        <td><code>## Code Generation Prompt</code></td>
+                        <td>Custom prompt template for code generation (most important!)</td>
+                    </tr>
+                    <tr>
+                        <td><code>## Required Exports</code></td>
+                        <td>List of functions that must be exported</td>
+                    </tr>
+                </table>
+
+                <h3>Custom Code Generation Prompt</h3>
+                <p>The most powerful feature of specs files is the <code>## Code Generation Prompt</code> section. When present, this section <strong>replaces the default prompt</strong> sent to the LLM:</p>
+                <pre><code><span class="token-comment">## Code Generation Prompt</span>
+
+Generate JavaScript/ESM code for the CoralFlow Equipment database table skill.
+
+<span class="token-comment">### Skill Info</span>
+- Skill Name: {{skillName}}
+- Entity: equipment
+- Primary Key Field: equipment_id
+- Primary Key Format: EQP-#### (e.g., EQP-0001)
+
+<span class="token-comment">### Required Function Signatures</span>
+
+<span class="token-comment">#### generatePKValues(record, existingRecords)</span>
+- Auto-generate equipment_id if not provided
+- Find highest existing number, increment by 1
+- Return: { equipment_id: "EQP-0001" }
+
+<span class="token-comment">#### validator_name(value, record)</span>
+- Check length: 2-100 characters
+- Return: JSON.stringify({ field, error, value }) or empty string
+
+<span class="token-comment">### Code Style Requirements</span>
+- Use arrow functions for simple operations
+- All validators return JSON string on error, empty string on success
+- Include JSDoc comments
+- Export all functions individually AND as default object</code></pre>
+
+                <div class="callout callout-tip">
+                    <div class="callout-title"><i class="fas fa-lightbulb"></i> Template Variables</div>
+                    <p>Use <code>{{skillName}}</code>, <code>{{entityName}}</code>, <code>{{content}}</code>, and <code>{{sections}}</code> in your prompts. These are automatically replaced with actual values during code generation.</p>
+                </div>
+
+                <h3>How Specs Are Used</h3>
+                <ol>
+                    <li>When <code>/generate</code> is called, the system checks for <code>.specs.md</code></li>
+                    <li>If found, specs content is loaded and passed to the prompt builder</li>
+                    <li>If specs contains <code>## Code Generation Prompt</code>, it's used as the LLM prompt</li>
+                    <li>Otherwise, specs are appended to the default prompt as context</li>
+                    <li>The LLM generates code following the specifications</li>
+                </ol>
+
+                <h3>Commands</h3>
+                <pre><code><span class="token-comment"># Read existing specifications</span>
+<span class="token-command">/specs</span> equipment
+
+<span class="token-comment"># Create or update specifications</span>
+<span class="token-command">/specs-write</span> equipment</code></pre>
+            </section>
+
+            <!-- Code Generation Section -->
+            <section class="doc-section" id="code-generation">
+                <h2>Code Generation Deep Dive</h2>
+                <p>Understanding how code is generated from skill definitions helps you write better skills and troubleshoot issues.</p>
+
+                <h3>Generation Pipeline</h3>
+                <div class="command-box">
+                    <div class="command-header">
+                        <span class="command-name">Code Generation Flow</span>
+                        <span class="command-type">Pipeline</span>
+                    </div>
+                    <div class="command-body">
+                        <pre><code>1. <span class="token-command">Trigger</span>: /generate equipment
+   ↓
+2. <span class="token-command">Discover</span>: Find equipment/tskill.md
+   ↓
+3. <span class="token-command">Check</span>: Is regeneration needed?
+   • Compare timestamps: tskill.md vs tskill.generated.mjs
+   • Also check .specs.md timestamp
+   ↓
+4. <span class="token-command">Parse</span>: Extract sections from Markdown
+   • ## Table Purpose → sections['Table Purpose']
+   • ## Fields → sections['Fields']
+   ↓
+5. <span class="token-command">Load Specs</span>: Read .specs.md (if exists)
+   ↓
+6. <span class="token-command">Build Prompt</span>: Select prompt builder by skill type
+   • tskill → buildCodeGenPrompt()
+   • iskill → buildIskillCodeGenPrompt()
+   • oskill → buildOskillCodeGenPrompt()
+   ↓
+7. <span class="token-command">Execute LLM</span>: Send prompt with mode='deep'
+   ↓
+8. <span class="token-command">Clean</span>: Remove markdown code blocks from response
+   ↓
+9. <span class="token-command">Write</span>: Save to tskill.generated.mjs
+   ↓
+10. <span class="token-command">Test</span>: Auto-run tests if .tests.mjs exists</code></pre>
+                    </div>
+                </div>
+
+                <h3>Generated Code Structure (tskill)</h3>
+                <p>For table skills, the generated <code>.mjs</code> file contains these function types:</p>
+
+                <h4>Validators</h4>
+                <p>Validate individual field values. Return error JSON or empty string:</p>
+                <pre><code><span class="token-comment">// validator_fieldName(value, record) → error string or ""</span>
+export function validator_equipment_id(value, record) {
+    const regex = /^EQP-\d{4}$/;
+
+    if (!value) {
+        return JSON.stringify({
+            field: "equipment_id",
+            error: "Field is required",
+            value
+        });
+    }
+
+    if (!regex.test(value)) {
+        return JSON.stringify({
+            field: "equipment_id",
+            error: "Must match format EQP-####",
+            value
+        });
+    }
+
+    return "";  <span class="token-comment">// Valid</span>
+}</code></pre>
+
+                <h4>Enumerators</h4>
+                <p>Return arrays of allowed values for enum fields:</p>
+                <pre><code><span class="token-comment">// enumerator_fieldName(currentRecord) → string[]</span>
+export function enumerator_status(currentRecord) {
+    return ["Available", "Allocated", "In Use", "Faulty", "Retired"];
+}
+
+export function enumerator_equipment_type(currentRecord) {
+    return ["plant", "tool", "vehicle", "miscellaneous"];
+}</code></pre>
+
+                <h4>Presenters</h4>
+                <p>Format values for display:</p>
+                <pre><code><span class="token-comment">// presenter_fieldName(value, record) → formatted string</span>
+export function presenter_verified_on(value, record) {
+    if (!value) return "Not verified";
+
+    const date = new Date(value);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+export function presenter_job_id(value, record) {
+    if (!value || !record?.job) return "Not assigned";
+    return `${record.job.name} (${record.job.client})`;
+}</code></pre>
+
+                <h4>Resolvers</h4>
+                <p>Convert human-friendly input to database format:</p>
+                <pre><code><span class="token-comment">// resolver_fieldName(humanValue, record, context) → dbValue</span>
+export async function resolver_verified_on(humanValue, record) {
+    if (!humanValue) return null;
+
+    const input = humanValue.trim().toLowerCase();
+
+    <span class="token-comment">// Handle natural language dates</span>
+    if (input === "today") {
+        return new Date().toISOString().split('T')[0];
+    }
+    if (input === "yesterday") {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+    }
+
+    <span class="token-comment">// Parse standard date formats</span>
+    const date = new Date(humanValue);
+    if (!isNaN(date.getTime())) {
+        return date.toISOString().split('T')[0];
+    }
+
+    return null;
+}</code></pre>
+
+                <h4>Record Operations</h4>
+                <pre><code><span class="token-comment">// Prepare record before database insert</span>
+export async function prepareRecord(record, context) {
+    const prepared = { ...record };
+
+    <span class="token-comment">// Apply resolvers to transform human input</span>
+    if (prepared.verified_on !== undefined) {
+        prepared.verified_on = await resolver_verified_on(
+            prepared.verified_on, record
+        );
+    }
+
+    return prepared;
+}
+
+<span class="token-comment">// Validate entire record</span>
+export async function validateRecord(record) {
+    const errors = [];
+
+    const idError = validator_equipment_id(record.equipment_id, record);
+    if (idError) errors.push(JSON.parse(idError));
+
+    const nameError = validator_name(record.name, record);
+    if (nameError) errors.push(JSON.parse(nameError));
+
+    return {
+        isValid: errors.length === 0,
+        errors
+    };
+}
+
+<span class="token-comment">// Auto-generate primary key values</span>
+export function generatePKValues(record, existingRecords = []) {
+    let maxNum = 0;
+    for (const r of existingRecords) {
+        const match = (r.equipment_id || '').match(/EQP-(\d+)/);
+        if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
+    }
+    return {
+        equipment_id: 'EQP-' + String(maxNum + 1).padStart(4, '0')
+    };
+}</code></pre>
+
+                <h3>LLM Execution Options</h3>
+                <table>
+                    <tr>
+                        <th>Option</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td><code>mode</code></td>
+                        <td><code>'deep'</code></td>
+                        <td>Use more capable model for complex code generation</td>
+                    </tr>
+                    <tr>
+                        <td><code>responseShape</code></td>
+                        <td><code>'code'</code></td>
+                        <td>Expect raw code output (no JSON wrapper)</td>
+                    </tr>
+                </table>
+
+                <div class="callout callout-warning">
+                    <div class="callout-title"><i class="fas fa-exclamation-triangle"></i> Regeneration Check</div>
+                    <p>Code is only regenerated when source files are newer than the output. To force regeneration, either <code>touch</code> the source files or delete the <code>.generated.mjs</code> file.</p>
+                </div>
+            </section>
+
+            <!-- Improving Prompts Section -->
+            <section class="doc-section" id="improving-prompts">
+                <h2>Improving LLM Prompts</h2>
+                <p>The quality of generated code depends heavily on the prompts sent to the LLM. Here's how to optimize them.</p>
+
+                <h3>Prompt Sources (Priority Order)</h3>
+                <ol>
+                    <li><strong>Custom Prompt in .specs.md</strong> - If <code>## Code Generation Prompt</code> section exists, it's used directly</li>
+                    <li><strong>Generic Prompt + Specs Context</strong> - Default prompt enhanced with specs content</li>
+                    <li><strong>Generic Prompt Only</strong> - Fallback when no specs file exists</li>
+                </ol>
+
+                <h3>Writing Effective Specs</h3>
+                <h4>1. Be Specific About Formats</h4>
+                <pre><code><span class="token-comment">## Field Formats</span>
+
+| Field | Format | Example | Validation |
+|-------|--------|---------|------------|
+| equipment_id | EQP-#### | EQP-0001 | Regex: ^EQP-\d{4}$ |
+| phone | E.164 | +1234567890 | Must start with + |
+| email | RFC 5322 | user@example.com | Standard email regex |</code></pre>
+
+                <h4>2. Provide Function Signatures</h4>
+                <pre><code><span class="token-comment">## Required Function Signatures</span>
+
+<span class="token-comment">### validator_equipment_id(value, record)</span>
+- Input: value (string), record (object)
+- Output: JSON string with {field, error, value} OR empty string ""
+- Must check: non-empty, matches EQP-#### format
+- Error message: "Equipment ID must match format EQP-####"</code></pre>
+
+                <h4>3. Include Example Code</h4>
+                <pre><code><span class="token-comment">## Code Examples</span>
+
+<span class="token-comment">### Validator Example</span>
+```javascript
+export function validator_name(value, record) {
+    if (!value || value.length < 2) {
+        return JSON.stringify({
+            field: "name",
+            error: "Name must be at least 2 characters",
+            value
+        });
+    }
+    return "";
+}
+```</code></pre>
+
+                <h4>4. Specify Error Handling</h4>
+                <pre><code><span class="token-comment">## Error Handling Requirements</span>
+
+- All validators must handle null/undefined gracefully
+- Return empty string "" for valid values, never null
+- Error JSON must include: field, error, value
+- Resolvers return null for unparseable input (don't throw)
+- prepareRecord must preserve unknown fields (spread operator)</code></pre>
+
+                <h4>5. Define Code Style</h4>
+                <pre><code><span class="token-comment">## Code Style Requirements</span>
+
+- Use ES modules (export/import, not require)
+- Use arrow functions for simple operations
+- Use async/await for any potentially async operations
+- Include JSDoc comments for all exported functions
+- No console.log statements in production code
+- Export functions individually AND as default object</code></pre>
+
+                <h3>Template Variables</h3>
+                <p>Use these placeholders in your custom prompts:</p>
+                <table>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Description</th>
+                        <th>Example Value</th>
+                    </tr>
+                    <tr>
+                        <td><code>{{skillName}}</code></td>
+                        <td>Name of the skill</td>
+                        <td>equipment</td>
+                    </tr>
+                    <tr>
+                        <td><code>{{entityName}}</code></td>
+                        <td>Entity name (derived from skill)</td>
+                        <td>equipment</td>
+                    </tr>
+                    <tr>
+                        <td><code>{{content}}</code></td>
+                        <td>Full skill definition markdown</td>
+                        <td># Equipment Skill...</td>
+                    </tr>
+                    <tr>
+                        <td><code>{{sections}}</code></td>
+                        <td>Parsed sections as JSON</td>
+                        <td>{"Fields": "...", "Validators": "..."}</td>
+                    </tr>
+                </table>
+
+                <h3>Complete Specs Example</h3>
+                <pre><code><span class="token-comment"># Product Skill - Technical Specification</span>
+
+<span class="token-comment">## Overview</span>
+Product skill manages inventory items with SKU tracking,
+pricing, and category classification.
+
+<span class="token-comment">## Schema</span>
+| Field | Type | Required | Format |
+|-------|------|----------|--------|
+| product_id | String | Yes | PRD-#### |
+| name | String | Yes | 2-100 chars |
+| price | Number | Yes | >= 0, 2 decimals |
+| category | Enum | Yes | See enumerator |
+
+<span class="token-comment">## Validation Rules</span>
+1. product_id: Auto-generated, format PRD-0001
+2. name: Required, 2-100 characters, no special chars
+3. price: Required, non-negative, max 2 decimal places
+4. category: Must be from allowed list
+
+<span class="token-comment">## Code Generation Prompt</span>
+
+Generate ESM code for product database table skill.
+
+Skill: {{skillName}}
+Entity: product
+
+<span class="token-comment">### Required Exports</span>
+- generatePKValues(record, existingRecords)
+- validator_product_id(value, record)
+- validator_name(value, record)
+- validator_price(value, record)
+- enumerator_category(record)
+- presenter_price(value, record)
+- prepareRecord(record, context)
+- validateRecord(record)
+
+<span class="token-comment">### Validator Return Format</span>
+- Valid: return ""
+- Invalid: return JSON.stringify({ field, error, value })
+
+<span class="token-comment">### Price Presenter</span>
+Format as currency: "$1,234.56"
+
+<span class="token-comment">### Category Values</span>
+Electronics, Clothing, Food, Tools, Other
+
+Generate clean ESM code with JSDoc comments.</code></pre>
+
+                <div class="callout callout-tip">
+                    <div class="callout-title"><i class="fas fa-lightbulb"></i> Iterative Improvement</div>
+                    <p>Use <code>/refine skill-name</code> to automatically improve code generation. The refiner reads test failures and updates the skill definition until tests pass.</p>
+                </div>
+
+                <h3>Debugging Generation Issues</h3>
+                <pre><code><span class="token-comment"># Enable verbose mode to see prompts</span>
+<span class="token-command">skill-manager-cli</span> --verbose
+
+<span class="token-comment"># Enable debug mode to see full JSON responses</span>
+<span class="token-command">skill-manager-cli</span> --debug
+
+<span class="token-comment"># Test generated code</span>
+<span class="token-command">/test</span> equipment
+
+<span class="token-comment"># Run specific test file</span>
+<span class="token-command">/run-tests</span> equipment</code></pre>
+            </section>
+
+            <!-- Configuration Section -->
+            <section class="doc-section" id="configuration">
+                <h2>Configuration</h2>
+
+                <h3>CLI Options</h3>
+                <table>
+                    <tr>
+                        <th>Option</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td><code>-d, --dir &lt;path&gt;</code></td>
+                        <td>Working directory with .AchillesSkills</td>
+                    </tr>
+                    <tr>
+                        <td><code>-v, --verbose</code></td>
+                        <td>Enable verbose logging</td>
+                    </tr>
+                    <tr>
+                        <td><code>--debug</code></td>
+                        <td>Enable debug mode (shows JSON output)</td>
+                    </tr>
+                    <tr>
+                        <td><code>--fast</code></td>
+                        <td>Use fast LLM mode (cheaper, quicker)</td>
+                    </tr>
+                    <tr>
+                        <td><code>--deep</code></td>
+                        <td>Use deep LLM mode (default, more capable)</td>
+                    </tr>
+                    <tr>
+                        <td><code>--no-markdown</code></td>
+                        <td>Disable markdown rendering</td>
+                    </tr>
+                </table>
+
+                <h3>Environment Variables</h3>
+                <p>At least one API key is required. You can configure multiple providers.</p>
+                <table>
+                    <tr>
+                        <th>Variable</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td><code>OPENAI_API_KEY</code></td>
+                        <td>API key for OpenAI (GPT-4o, GPT-4o-mini)</td>
+                    </tr>
+                    <tr>
+                        <td><code>ANTHROPIC_API_KEY</code></td>
+                        <td>API key for Anthropic (Claude Sonnet, Claude Opus)</td>
+                    </tr>
+                    <tr>
+                        <td><code>GEMINI_API_KEY</code></td>
+                        <td>API key for Google (Gemini 2.5 Pro, Gemini 2.5 Flash)</td>
+                    </tr>
+                    <tr>
+                        <td><code>OPENROUTER_API_KEY</code></td>
+                        <td>API key for OpenRouter (multiple model access)</td>
+                    </tr>
+                    <tr>
+                        <td><code>HUGGINGFACE_API_KEY</code></td>
+                        <td>API key for Hugging Face models</td>
+                    </tr>
+                    <tr>
+                        <td><code>ACHILLES_ORCHESTRATOR_MODE</code></td>
+                        <td>Default LLM mode: 'fast' or 'deep'</td>
+                    </tr>
+                </table>
+
+                <h3>Directory Structure</h3>
+                <pre><code>my-project/
+├── .AchillesSkills/           <span class="token-comment"># User-defined skills</span>
+│   ├── my-skill/
+│   │   ├── my-skill.tskill.md
+│   │   ├── my-skill.tskill.generated.mjs
+│   │   ├── my-skill.specs.md
+│   │   └── my-skill.tests.mjs
+│   └── another-skill/
+│       └── ...
+└── .skill-manager-history     <span class="token-comment"># Command history</span></code></pre>
+            </section>
+
+            <!-- Workflows Section -->
+            <section class="doc-section" id="workflows">
+                <h2>Common Workflows</h2>
+
+                <h3>Creating a New Validator</h3>
+                <pre><code><span class="token-comment"># 1. Get the template</span>
+<span class="token-command">/template</span> tskill
+
+<span class="token-comment"># 2. Create the skill</span>
+<span class="token-command">/write</span> product-validator tskill
+
+<span class="token-comment"># 3. Validate structure</span>
+<span class="token-command">/validate</span> product-validator
+
+<span class="token-comment"># 4. Generate code</span>
+<span class="token-command">/generate</span> product-validator
+
+<span class="token-comment"># 5. Test the generated code</span>
+<span class="token-command">/test</span> product-validator</code></pre>
+
+                <h3>Iterative Improvement</h3>
+                <pre><code><span class="token-comment"># Automatic refinement loop</span>
+<span class="token-command">/refine</span> product-validator
+
+<span class="token-comment"># Or manually update a section</span>
+<span class="token-command">/update</span> product-validator validators</code></pre>
+
+                <h3>Building an Orchestrator</h3>
+                <pre><code><span class="token-comment"># 1. Create the orchestrator</span>
+<span class="token-command">/write</span> inventory-manager oskill
+
+<span class="token-comment"># 2. Define allowed skills in the file</span>
+<span class="token-command">/read</span> inventory-manager
+
+<span class="token-comment"># 3. Test routing behavior</span>
+<span class="token-command">/exec</span> inventory-manager "show all products"</code></pre>
+            </section>
+
+            <!-- Architecture Section -->
+            <section class="doc-section" id="architecture">
+                <h2>Architecture</h2>
+
+                <h3>System Overview</h3>
+                <pre><code>┌─────────────────────────────────────────────────────────────┐
+│                      Entry Point                             │
+│                      (index.mjs)                             │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────────────┐
+│                     REPLSession                              │
+│   ┌─────────────────┐ ┌─────────────────┐ ┌──────────────┐  │
+│   │InteractivePrompt│ │  QuickCommands  │ │     NLP      │  │
+│   │  (input/history)│ │(instant actions)│ │ (LLM routing)│  │
+│   └─────────────────┘ └─────────────────┘ └──────────────┘  │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────────────┐
+│                  SlashCommandHandler                         │
+│              (deterministic command routing)                 │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────────────┐
+│                 RecursiveSkilledAgent                        │
+│   ┌─────────────────┐        ┌─────────────────────────┐    │
+│   │  Built-in Skills │        │     User Skills         │    │
+│   │  (src/.Achilles) │        │  (.AchillesSkills/)     │    │
+│   └─────────────────┘        └─────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘</code></pre>
+
+                <h3>Two-Layer Skill Discovery</h3>
+                <ol>
+                    <li><strong>Built-in Skills</strong> - Bundled with CLI in <code>src/.AchillesSkills/</code></li>
+                    <li><strong>User Skills</strong> - Project-specific in <code>.AchillesSkills/</code></li>
+                </ol>
+                <p>User skills can override built-in skills of the same name.</p>
+
+                <h3>Dependencies</h3>
+                <ul>
+                    <li><strong>achilles-agent-lib</strong> - Core agent execution framework</li>
+                    <li><strong>RecursiveSkilledAgent</strong> - Skill discovery and execution</li>
+                    <li><strong>LLM Providers</strong> - OpenAI, Anthropic, Google, OpenRouter, Hugging Face</li>
+                </ul>
+
+                <div class="callout callout-info">
+                    <div class="callout-title"><i class="fas fa-info-circle"></i> Design Philosophy</div>
+                    <p>Skills are defined in Markdown for human readability, LLM-native processing, and version control friendliness. Code generation is reserved for complex logic like validators and presenters.</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Mobile menu toggle -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Mobile sidebar toggle
+            const mobileToggle = document.querySelector("#mobile-menu-toggle");
+            const sidebar = document.querySelector("#docs-sidebar");
+            if (mobileToggle && sidebar) {
+                mobileToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle("open");
+                    const icon = mobileToggle.querySelector('i');
+                    icon.classList.toggle('fa-bars');
+                    icon.classList.toggle('fa-times');
+                });
+            }
+
+            // Active link highlighting on scroll
+            const sections = document.querySelectorAll('.doc-section');
+            const navLinks = document.querySelectorAll('.sidebar-nav a');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '-20px 0px -70% 0px',
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === '#' + entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                if (section.id) {
+                    observer.observe(section);
+                }
+            });
+
+            // Smooth scroll for sidebar links
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    // Close mobile sidebar after clicking
+                    if (window.innerWidth <= 900 && sidebar) {
+                        sidebar.classList.remove('open');
+                        const icon = mobileToggle.querySelector('i');
+                        icon.classList.add('fa-bars');
+                        icon.classList.remove('fa-times');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -6,7 +6,7 @@
     "type": "module",
     "main": "src/index.mjs",
     "bin": {
-        "skill-manager": "./bin/skill-manager.mjs"
+        "skill-manager-cli": "./bin/skill-manager.mjs"
     },
     "exports": {
         ".": "./src/index.mjs",
