@@ -676,44 +676,6 @@
 <span class="token-string">"improve the product validator"</span>
 <span class="token-string">"fix the failing tests in equipment"</span></code></pre>
 
-                <h3>Multi-Turn Conversations</h3>
-                <p>The CLI supports multi-turn conversations for complex operations like creating records with validation:</p>
-
-                <div class="command-box">
-                    <div class="command-header">
-                        <span class="command-name">Example: Creating Equipment</span>
-                        <span class="command-type">Multi-Turn</span>
-                    </div>
-                    <div class="command-body">
-                        <div class="command-section">
-                            <div class="command-section-title">Turn 1 - User</div>
-                            <pre><code><span class="token-string">"Create a Makita drill as equipment in the Main Warehouse"</span></code></pre>
-                        </div>
-                        <div class="command-section">
-                            <div class="command-section-title">Turn 1 - System Response</div>
-                            <pre><code>Validation requires additional fields:
-
-| Field   | Current    | Required | Possible Values              |
-|---------|------------|----------|------------------------------|
-| status  | (empty)    | Yes      | Available, In Use, Faulty... |
-
-Please provide the missing values.</code></pre>
-                        </div>
-                        <div class="command-section">
-                            <div class="command-section-title">Turn 2 - User</div>
-                            <pre><code><span class="token-string">"status is Available"</span></code></pre>
-                        </div>
-                        <div class="command-section">
-                            <div class="command-section-title">Turn 2 - System Response</div>
-                            <pre><code>All fields valid. Confirm creation? (yes/no)</code></pre>
-                        </div>
-                        <div class="command-section">
-                            <div class="command-section-title">Turn 3 - User</div>
-                            <pre><code><span class="token-string">"yes"</span></code></pre>
-                        </div>
-                    </div>
-                </div>
-
                 <h3>Skill Modification Examples</h3>
                 <pre><code><span class="token-comment"># Update specific sections</span>
 <span class="token-string">"add a phone_number field to the customer skill"</span>
