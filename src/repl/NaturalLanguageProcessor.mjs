@@ -5,7 +5,7 @@
  */
 
 import readline from 'node:readline';
-import { ActionReporter } from 'achilles-agent-lib/utils/ActionReporter.mjs';
+import { ActionReporter } from 'achillesAgentLib/utils/ActionReporter.mjs';
 import { createSpinner } from '../ui/spinner.mjs';
 import { renderMarkdown } from '../ui/MarkdownRenderer.mjs';
 

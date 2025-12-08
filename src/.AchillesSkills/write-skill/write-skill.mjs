@@ -4,7 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { SKILL_FILE_NAMES } from 'achilles-agent-lib/RecursiveSkilledAgents';
+import { SKILL_FILE_NAMES } from 'achillesAgentLib/RecursiveSkilledAgents';
 
 export async function action(recursiveSkilledAgent, prompt) {
     const skillsDir = recursiveSkilledAgent?.getSkillsDir?.();

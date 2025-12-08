@@ -7,7 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { LoopAgentSession } from 'achilles-agent-lib/LLMAgents/AgenticSession.mjs';
+import { LoopAgentSession } from 'achillesAgentLib/LLMAgents/AgenticSession.mjs';
 import { detectSkillType, loadSpecsContent } from '../../schemas/skillSchemas.mjs';
 import { buildSystemPrompt, buildEvaluationPrompt } from './skillRefiner.prompts.mjs';
 import { runTestFile } from '../../lib/testDiscovery.mjs';

@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
-import { RecursiveSkilledAgent } from 'achilles-agent-lib/RecursiveSkilledAgents';
-import { LLMAgent } from 'achilles-agent-lib/LLMAgents';
+import { RecursiveSkilledAgent } from 'achillesAgentLib/RecursiveSkilledAgents';
+import { LLMAgent } from 'achillesAgentLib/LLMAgents';
 import { HistoryManager } from './repl/HistoryManager.mjs';
 import { CommandSelector, showCommandSelector, showSkillSelector, buildCommandList } from './ui/CommandSelector.mjs';
 import { SlashCommandHandler } from './repl/SlashCommandHandler.mjs';
@@ -21,7 +21,7 @@ const builtInSkillsDir = path.join(__dirname, '.AchillesSkills');
 
 // Re-export classes and functions for library usage
 export {
-    // Core agent (from achilles-agent-lib)
+    // Core agent (from achillesAgentLib)
     RecursiveSkilledAgent,
     LLMAgent,
     // REPL components

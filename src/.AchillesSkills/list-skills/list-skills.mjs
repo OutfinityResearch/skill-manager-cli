@@ -2,7 +2,7 @@
  * List Skills - Returns all registered skills from the catalog
  */
 
-import { Sanitiser } from 'achilles-agent-lib/utils/Sanitiser.mjs';
+import { Sanitiser } from 'achillesAgentLib/utils/Sanitiser.mjs';
 
 export async function action(recursiveSkilledAgent, prompt) {
     if (!recursiveSkilledAgent || typeof recursiveSkilledAgent.getSkills !== 'function') {

@@ -176,11 +176,21 @@ export async function action(recursiveSkilledAgent, prompt) {
             `Size: ${generatedCode.length} bytes`,
         ];
 
-        // Auto-run tests if .tests.mjs exists
-        const testFile = path.join(skillDir, '.tests.mjs');
-        if (fs.existsSync(testFile)) {
+        // Auto-run tests from the tests folder in the working directory
+        const workingDir = recursiveSkilledAgent?.startDir || process.cwd();
+        const testsDir = path.join(workingDir, 'tests');
+
+        // Look for test files matching the skill name
+        const testPatterns = [
+            path.join(testsDir, `${skillName}.test.mjs`),
+            path.join(testsDir, `${skillName}.tests.mjs`),
+        ];
+
+        const testFile = testPatterns.find(f => fs.existsSync(f));
+
+        if (testFile) {
             outputLines.push('');
-            outputLines.push('[Auto-running tests...]');
+            outputLines.push(`[Auto-running tests from ${path.relative(workingDir, testFile)}...]`);
 
             try {
                 const testResult = await runTestFile(testFile, {
@@ -201,7 +211,7 @@ export async function action(recursiveSkilledAgent, prompt) {
             }
         } else {
             outputLines.push('');
-            outputLines.push('No .tests.mjs file found. Use /test to create and run tests.');
+            outputLines.push(`No test file found for "${skillName}" in tests/ folder.`);
         }
 
         return outputLines.join('\n');
