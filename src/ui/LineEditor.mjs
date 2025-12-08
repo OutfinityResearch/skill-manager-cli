@@ -9,7 +9,11 @@
  * - Ctrl+A/E and Home/End for line start/end
  * - Ctrl+U to clear line
  * - Ctrl+K to kill to end of line
+ * - Ctrl+Insert or Ctrl+Shift+C to copy line to clipboard
+ * - Shift+Insert or Ctrl+Shift+V to paste from clipboard
  */
+
+import { copyToClipboard, pasteFromClipboard } from '../lib/clipboard.mjs';
 
 // ANSI escape codes for terminal control
 const ANSI = {
@@ -46,6 +50,16 @@ const KEYS = {
 
     // Standard keys
     BACKSPACE: '\x7f',  // DEL key (0x7f) - regular backspace
+
+    // Clipboard operations
+    // Ctrl+Insert (copy) - various terminal encodings
+    COPY: ['\x1b[2;5~', '\x1b[2^'],
+    // Shift+Insert (paste) - various terminal encodings
+    PASTE: ['\x1b[2;2~', '\x1b[2$'],
+    // Ctrl+Shift+C (copy) - kitty/modern terminal encoding
+    COPY_ALT: ['\x1b[99;6u', '\x1b[67;6u'],
+    // Ctrl+Shift+V (paste) - kitty/modern terminal encoding
+    PASTE_ALT: ['\x1b[118;6u', '\x1b[86;6u'],
 };
 
 /**
@@ -277,6 +291,36 @@ export class LineEditor {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Clipboard operations
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Copy current buffer content to system clipboard
+     * @returns {boolean} True if copy was successful
+     */
+    copyToClipboard() {
+        if (this.buffer.length === 0) {
+            return false;
+        }
+        return copyToClipboard(this.buffer);
+    }
+
+    /**
+     * Paste from system clipboard at cursor position
+     * @returns {boolean} True if paste was successful and buffer was modified
+     */
+    pasteFromClipboard() {
+        const text = pasteFromClipboard();
+        if (text && text.length > 0) {
+            // Filter out newlines - line editor is single-line
+            const cleanText = text.replace(/[\r\n]/g, ' ');
+            this.insert(cleanText);
+            return true;
+        }
+        return false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Rendering
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -385,6 +429,16 @@ export class LineEditor {
         // Delete key (single character delete)
         if (keyStr === KEYS.DELETE) {
             return this.deleteForward() ? 'modified' : 'none';
+        }
+
+        // Copy to clipboard (Ctrl+Insert or Ctrl+Shift+C)
+        if (matches(keyStr, KEYS.COPY) || matches(keyStr, KEYS.COPY_ALT)) {
+            return this.copyToClipboard() ? 'none' : 'none';
+        }
+
+        // Paste from clipboard (Shift+Insert or Ctrl+Shift+V)
+        if (matches(keyStr, KEYS.PASTE) || matches(keyStr, KEYS.PASTE_ALT)) {
+            return this.pasteFromClipboard() ? 'modified' : 'none';
         }
 
         // Regular printable character

@@ -97,6 +97,118 @@ function processLine(line) {
 }
 
 /**
+ * Parse a markdown table row into cells.
+ * @param {string} row - Table row string
+ * @returns {string[]} - Array of cell values (trimmed)
+ */
+function parseTableRow(row) {
+    // Remove leading/trailing pipes and split by |
+    const trimmed = row.trim().replace(/^\||\|$/g, '');
+    return trimmed.split('|').map(cell => cell.trim());
+}
+
+/**
+ * Check if a line is a table separator row (e.g., |---|---|)
+ * @param {string} line - Line to check
+ * @returns {boolean}
+ */
+function isTableSeparator(line) {
+    const trimmed = line.trim();
+    // Must have pipes and only contain |, -, :, and spaces
+    return trimmed.includes('|') && /^[\s|:\-]+$/.test(trimmed);
+}
+
+/**
+ * Check if a line looks like a table row.
+ * @param {string} line - Line to check
+ * @returns {boolean}
+ */
+function isTableRow(line) {
+    const trimmed = line.trim();
+    // Must start and end with | or have | somewhere in between
+    return trimmed.includes('|') && !trimmed.startsWith('```');
+}
+
+/**
+ * Format markdown tables with aligned columns.
+ * @param {string} text - Full markdown text
+ * @returns {string} - Text with aligned tables
+ */
+function formatTables(text) {
+    const lines = text.split('\n');
+    const result = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // Check if this could be the start of a table (header row)
+        if (isTableRow(line) && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+            // Found a table - collect all rows
+            const tableLines = [line];
+            let j = i + 1;
+
+            // Collect separator and all following table rows
+            while (j < lines.length && (isTableSeparator(lines[j]) || isTableRow(lines[j]))) {
+                tableLines.push(lines[j]);
+                j++;
+            }
+
+            // Parse all rows into cells
+            const parsedRows = tableLines.map(parseTableRow);
+
+            // Calculate max width for each column
+            const colCount = Math.max(...parsedRows.map(row => row.length));
+            const colWidths = new Array(colCount).fill(0);
+
+            for (const row of parsedRows) {
+                for (let c = 0; c < row.length; c++) {
+                    // For separator rows, minimum width is 3 (---)
+                    const cellLen = isTableSeparator(tableLines[parsedRows.indexOf(row)])
+                        ? 3
+                        : row[c].length;
+                    colWidths[c] = Math.max(colWidths[c], cellLen);
+                }
+            }
+
+            // Rebuild aligned table
+            for (let r = 0; r < tableLines.length; r++) {
+                const originalLine = tableLines[r];
+                const cells = parsedRows[r];
+                const isSeparator = isTableSeparator(originalLine);
+
+                const alignedCells = [];
+                for (let c = 0; c < colCount; c++) {
+                    const cell = cells[c] || '';
+                    const width = colWidths[c];
+
+                    if (isSeparator) {
+                        // Rebuild separator with proper width (no spaces)
+                        alignedCells.push('-'.repeat(width + 2)); // +2 to account for spaces in content rows
+                    } else {
+                        // Pad cell content to column width
+                        alignedCells.push(' ' + cell.padEnd(width) + ' ');
+                    }
+                }
+
+                if (isSeparator) {
+                    result.push('|' + alignedCells.join('|') + '|');
+                } else {
+                    result.push('|' + alignedCells.join('|') + '|');
+                }
+            }
+
+            i = j;
+        } else {
+            result.push(line);
+            i++;
+        }
+    }
+
+    return result.join('\n');
+}
+
+/**
  * Render markdown text with ANSI terminal styling.
  * @param {string} text - Markdown text to render
  * @returns {string} - Text with ANSI styling for terminal display
@@ -105,6 +217,9 @@ export function renderMarkdown(text) {
     if (typeof text !== 'string') {
         return String(text);
     }
+
+    // Pre-process: align tables before other formatting
+    text = formatTables(text);
 
     const lines = text.split('\n');
     const output = [];
@@ -149,4 +264,5 @@ export function renderMarkdown(text) {
     return output.join('\n');
 }
 
+export { formatTables };
 export default renderMarkdown;
