@@ -124,6 +124,13 @@ export class SlashCommandHandler {
             args: 'required',
             needsSkillArg: true,
         },
+        'write-tests': {
+            skill: 'write-tests',
+            usage: '/write-tests <skill-name>',
+            description: 'Generate test file for a skill',
+            args: 'required',
+            needsSkillArg: true,
+        },
     };
 
     /**
@@ -351,7 +358,7 @@ export class SlashCommandHandler {
                 const argPrefix = args.toLowerCase();
 
                 // For commands that take skill names, suggest user skills
-                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'specs', 'specs-write'].includes(command)) {
+                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'specs', 'specs-write', 'write-tests'].includes(command)) {
                     const skills = this.getUserSkills();
                     const matchingSkills = skills
                         .map(s => s.shortName || s.name)
