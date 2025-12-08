@@ -36,21 +36,8 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     try {
         const content = fs.readFileSync(skillInfo.filePath, 'utf8');
-        const skillDir = skillInfo.record?.skillDir || path.dirname(skillInfo.filePath);
 
-        // Check for specs file
-        let specsSection = '';
-        const specsPath = path.join(skillDir, '.specs.md');
-        if (fs.existsSync(specsPath)) {
-            try {
-                const specsContent = fs.readFileSync(specsPath, 'utf8');
-                specsSection = `\n\n=== .specs.md ===\nPath: ${specsPath}\n\n${specsContent}`;
-            } catch (e) {
-                // Ignore errors reading specs file
-            }
-        }
-
-        return `=== ${path.basename(skillInfo.filePath)} ===\nPath: ${skillInfo.filePath}\nType: ${skillInfo.type}\n\n${content}${specsSection}`;
+        return `=== ${path.basename(skillInfo.filePath)} ===\nPath: ${skillInfo.filePath}\nType: ${skillInfo.type}\n\n${content}`;
     } catch (error) {
         return `Error reading skill file: ${error.message}`;
     }
