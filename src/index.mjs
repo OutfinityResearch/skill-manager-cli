@@ -157,7 +157,16 @@ async function main() {
             process.exit(1);
         }
     } else {
-        // REPL mode
+        // REPL mode - first await any pending skill preparations
+        if (agent.pendingPreparations && agent.pendingPreparations.length > 0) {
+            const count = agent.pendingPreparations.length;
+            if (verbose) {
+                console.log(`Waiting for ${count} skill preparation(s) to complete...`);
+            }
+            await Promise.all(agent.pendingPreparations);
+            agent.pendingPreparations.length = 0; // Clear the array
+        }
+
         const session = new REPLSession(agent, {
             workingDir,
             skillsDir,
