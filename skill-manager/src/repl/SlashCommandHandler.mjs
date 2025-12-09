@@ -299,7 +299,12 @@ export class SlashCommandHandler {
 
         // Execute the mapped skill
         try {
-            const result = await this.executeSkill(cmdDef.skill, args || '', options);
+            // For list-skills, use 'list' as default input since the skill requires non-empty input
+            let input = args || '';
+            if (!input && (command === 'ls' || command === 'list')) {
+                input = 'list';
+            }
+            const result = await this.executeSkill(cmdDef.skill, input, options);
             return {
                 handled: true,
                 result: formatSlashResult(result),
