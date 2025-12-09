@@ -15,7 +15,32 @@
 
 ## Overview
 
-The **skill-manager-cli** is a command-line interface for managing, generating, and testing skill definition files in `.AchillesSkills` directories. It provides both an interactive REPL mode and single-shot command execution, powered by LLM-based natural language understanding.
+The **skill-manager-cli** is a ploinky repository containing the **skill-manager** agent - a command-line interface for managing, generating, and testing skill definition files in `.AchillesSkills` directories. It provides both an interactive REPL mode and single-shot command execution, powered by LLM-based natural language understanding.
+
+## Repository Structure
+
+```
+skill-manager-cli/           # Ploinky repository (outer)
+├── CLAUDE.md               # This file
+├── ARCHITECTURE.md         # Architecture documentation
+├── docs/                   # Documentation website
+├── tests/                  # Test files
+├── test-env/               # Test environment
+└── skill-manager/          # Ploinky agent (inner)
+    ├── manifest.json       # Ploinky agent manifest
+    ├── scripts/            # Install scripts
+    │   └── installPrerequisites.sh
+    ├── package.json        # Node.js dependencies
+    ├── src/                # Source code
+    │   ├── index.mjs       # Entry point
+    │   ├── .AchillesSkills/ # Built-in skills
+    │   ├── repl/           # REPL components
+    │   ├── ui/             # UI components
+    │   ├── lib/            # Library modules
+    │   └── schemas/        # Skill schemas
+    └── bin/                # CLI binaries
+        └── skill-manager-cli
+```
 
 ### Key Capabilities
 
@@ -36,7 +61,7 @@ The **skill-manager-cli** is a command-line interface for managing, generating, 
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌──────────────────────────────────────────────────────────────────────────┐   │
-│  │                           Entry Point (index.mjs)                         │   │
+│  │                     Entry Point (skill-manager/src/index.mjs)                         │   │
 │  │  • CLI argument parsing                                                   │   │
 │  │  • Single-shot vs REPL mode detection                                     │   │
 │  │  • Logger configuration                                                   │   │
@@ -128,7 +153,7 @@ The **skill-manager-cli** is a command-line interface for managing, generating, 
 
 ## Core Components
 
-### 1. Entry Point (`src/index.mjs`)
+### 1. Entry Point (`skill-manager/src/index.mjs`)
 
 The main CLI entry point that initializes `RecursiveSkilledAgent` directly.
 
@@ -141,7 +166,7 @@ The main CLI entry point that initializes `RecursiveSkilledAgent` directly.
 **Key Design Decision:**
 > The CLI uses `RecursiveSkilledAgent` directly (no wrapper class) with `additionalSkillRoots` to register built-in skills. This reduces abstraction layers while still supporting multi-source skill discovery. The `REPLSession` owns all REPL-specific concerns (history, formatting, UI).
 
-### 2. REPLSession (`src/REPLSession.mjs`)
+### 2. REPLSession (`skill-manager/src/repl/REPLSession.mjs`)
 
 Manages the interactive command-line session. Takes a `RecursiveSkilledAgent` and options.
 
@@ -169,7 +194,7 @@ new REPLSession(agent, {
 **Key Design Decision:**
 > Raw terminal mode (`stdin.setRawMode(true)`) is used instead of standard readline for precise control over key handling. This enables features like the "/" command picker, real-time hints, and ESC cancellation that wouldn't be possible with buffered input. REPLSession owns its dependencies (HistoryManager, context) rather than receiving them from a wrapper.
 
-### 3. SlashCommandHandler (`src/SlashCommandHandler.mjs`)
+### 3. SlashCommandHandler (`skill-manager/src/repl/SlashCommandHandler.mjs`)
 
 Maps slash commands to skill executions.
 
@@ -182,7 +207,7 @@ Maps slash commands to skill executions.
 **Key Design Decision:**
 > Slash commands provide deterministic, fast access to specific skills without LLM interpretation. This dual-interface approach (slash commands + natural language) gives users control when they know exactly what they want, while still supporting flexible natural language when exploring.
 
-### 4. CommandSelector (`src/CommandSelector.mjs`)
+### 4. CommandSelector (`skill-manager/src/ui/CommandSelector.mjs`)
 
 Interactive picker for commands and skills.
 
@@ -195,7 +220,7 @@ Interactive picker for commands and skills.
 **Key Design Decision:**
 > The selector uses a scroll-windowed approach (`maxVisible`) rather than showing all options at once. This scales gracefully as the number of skills grows and keeps the UI clean.
 
-### 5. HistoryManager (`src/HistoryManager.mjs`)
+### 5. HistoryManager (`skill-manager/src/repl/HistoryManager.mjs`)
 
 Persists command history per project.
 
@@ -207,7 +232,7 @@ Persists command history per project.
 **Key Design Decision:**
 > Per-directory history (stored in `.skill-manager-history` within each project) rather than global history. This provides context-relevant suggestions and keeps different project histories isolated.
 
-### 6. ResultFormatter (`src/ResultFormatter.mjs`)
+### 6. ResultFormatter (`skill-manager/src/ui/ResultFormatter.mjs`)
 
 Transforms raw execution results for display.
 
@@ -219,7 +244,7 @@ Transforms raw execution results for display.
 **Key Design Decision:**
 > Stateless utility functions extracted from the main CLI class. This follows the principle of separating concerns: the CLI handles orchestration, the formatter handles presentation.
 
-### 7. Spinner (`src/spinner.mjs`)
+### 7. Spinner (`skill-manager/src/ui/spinner.mjs`)
 
 Animated progress indicator.
 
@@ -232,7 +257,7 @@ Animated progress indicator.
 **Key Design Decision:**
 > The spinner writes to `stderr` by default, keeping `stdout` clean for actual command output. This enables proper piping and redirection of results.
 
-### 8. skillSchemas (`src/skillSchemas.mjs`)
+### 8. skillSchemas (`skill-manager/src/schemas/skillSchemas.mjs`)
 
 Schema definitions and validation.
 
@@ -339,7 +364,7 @@ This enables multi-source skill discovery without wrapper classes. The CLI uses 
 ### 3. Two-Layer Skill Discovery
 
 **Decision:** Skills are loaded from two locations:
-1. Built-in skills (bundled with the CLI in `src/.AchillesSkills/`)
+1. Built-in skills (bundled with the CLI in `skill-manager/src/.AchillesSkills/`)
 2. User skills (in the working directory's `.AchillesSkills/`)
 
 **Rationale:**
@@ -455,7 +480,7 @@ This enables multi-source skill discovery without wrapper classes. The CLI uses 
 
 ### Built-in Skills
 
-The CLI ships with these built-in skills in `src/.AchillesSkills/`:
+The CLI ships with these built-in skills in `skill-manager/src/.AchillesSkills/`:
 
 | Skill | Type | Purpose |
 |-------|------|---------|
@@ -630,18 +655,19 @@ User types: "/read my-skill"
 
 ## Module Reference
 
-| Module | Lines | Purpose |
-|--------|-------|---------|
-| `index.mjs` | ~200 | CLI entry point, argument parsing, mode detection |
-| `SkillManagerCli.mjs` | ~310 | Core orchestration, agent initialization |
-| `REPLSession.mjs` | ~830 | Interactive session, input handling |
-| `SlashCommandHandler.mjs` | ~390 | Slash command definitions and execution |
-| `CommandSelector.mjs` | ~460 | Interactive command/skill picker |
-| `HistoryManager.mjs` | ~210 | Command history persistence |
-| `ResultFormatter.mjs` | ~90 | Output formatting utilities |
-| `HelpPrinter.mjs` | ~100 | Help screen rendering |
-| `spinner.mjs` | ~220 | Animated progress indicator |
-| `skillSchemas.mjs` | ~520 | Schema definitions, validation, and specs utilities |
+All modules are located in `skill-manager/src/`:
+
+| Module | Location | Purpose |
+|--------|----------|---------|
+| `index.mjs` | `src/` | CLI entry point, argument parsing, mode detection |
+| `REPLSession.mjs` | `src/repl/` | Interactive session, input handling |
+| `SlashCommandHandler.mjs` | `src/repl/` | Slash command definitions and execution |
+| `HistoryManager.mjs` | `src/repl/` | Command history persistence |
+| `CommandSelector.mjs` | `src/ui/` | Interactive command/skill picker |
+| `ResultFormatter.mjs` | `src/ui/` | Output formatting utilities |
+| `HelpPrinter.mjs` | `src/ui/` | Help screen rendering |
+| `spinner.mjs` | `src/ui/` | Animated progress indicator |
+| `skillSchemas.mjs` | `src/schemas/` | Schema definitions, validation, and specs utilities |
 
 ---
 

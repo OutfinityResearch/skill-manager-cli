@@ -267,8 +267,6 @@ export class REPLSession {
                 context: this.context,
             });
 
-            console.log('[DEBUG] Slash command result:', JSON.stringify(result, null, 2));
-
             if (result.handled) {
                 // Handle /quit and /exit commands
                 if (result.exitRepl) {
@@ -291,9 +289,7 @@ export class REPLSession {
                 // Handle /help with no args - show interactive help picker
                 } else if (result.showHelpPicker) {
                     spinner.stop();
-                    console.log('\n[DEBUG] Calling _handleHelpPicker...');
                     await this._handleHelpPicker();
-                    console.log('[DEBUG] _handleHelpPicker completed.\n');
                 } else if (result.error) {
                     spinner.fail(result.error);
                 } else if (result.result) {
@@ -464,13 +460,9 @@ export class REPLSession {
      * @private
      */
     async _handleHelpPicker() {
-        console.log('[DEBUG] _handleHelpPicker started');
-
         // Build help topics list
         const topics = getHelpTopics();
         const commands = getCommandHelp();
-
-        console.log(`[DEBUG] Got ${topics.length} topics, ${commands.length} commands`);
 
         // Combine topics and commands into a single list
         const helpItems = [
@@ -489,8 +481,6 @@ export class REPLSession {
                 type: 'command',
             })),
         ];
-
-        console.log(`[DEBUG] Built ${helpItems.length} help items`);
 
         console.log(`\nSelect a help topic or command:\n`);
 

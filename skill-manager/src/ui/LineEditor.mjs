@@ -60,6 +60,10 @@ const KEYS = {
     COPY_ALT: ['\x1b[99;6u', '\x1b[67;6u'],
     // Ctrl+Shift+V (paste) - kitty/modern terminal encoding
     PASTE_ALT: ['\x1b[118;6u', '\x1b[86;6u'],
+
+    // Bracketed paste mode markers
+    PASTE_START: '\x1b[200~',
+    PASTE_END: '\x1b[201~',
 };
 
 /**
@@ -295,6 +299,21 @@ export class LineEditor {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
+     * Enable bracketed paste mode in the terminal.
+     * When enabled, pasted text is wrapped with escape sequences.
+     */
+    static enableBracketedPaste() {
+        process.stdout.write('\x1b[?2004h');
+    }
+
+    /**
+     * Disable bracketed paste mode in the terminal.
+     */
+    static disableBracketedPaste() {
+        process.stdout.write('\x1b[?2004l');
+    }
+
+    /**
      * Copy current buffer content to system clipboard
      * @returns {boolean} True if copy was successful
      */
@@ -311,6 +330,21 @@ export class LineEditor {
      */
     pasteFromClipboard() {
         const text = pasteFromClipboard();
+        if (text && text.length > 0) {
+            // Filter out newlines - line editor is single-line
+            const cleanText = text.replace(/[\r\n]/g, ' ');
+            this.insert(cleanText);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Handle bracketed paste content (text pasted via terminal)
+     * @param {string} text - The pasted text (without bracket markers)
+     * @returns {boolean} True if text was inserted
+     */
+    handleBracketedPaste(text) {
         if (text && text.length > 0) {
             // Filter out newlines - line editor is single-line
             const cleanText = text.replace(/[\r\n]/g, ' ');
@@ -433,7 +467,8 @@ export class LineEditor {
 
         // Copy to clipboard (Ctrl+Insert or Ctrl+Shift+C)
         if (matches(keyStr, KEYS.COPY) || matches(keyStr, KEYS.COPY_ALT)) {
-            return this.copyToClipboard() ? 'none' : 'none';
+            this.copyToClipboard();
+            return 'none';
         }
 
         // Paste from clipboard (Shift+Insert or Ctrl+Shift+V)

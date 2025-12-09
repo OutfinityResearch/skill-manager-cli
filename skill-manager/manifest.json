@@ -1,0 +1,16 @@
+{
+    "container": "docker.io/library/node:22.20-alpine",
+    "install": "/code/scripts/installPrerequisites.sh",
+    "env": [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "MISTRAL_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "OPENROUTER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "WORKSPACE_PATH"
+    ],
+    "cli": "node /code/src/index.mjs",
+    "about": "Skill Manager CLI for managing, generating, and testing skill definition files in .AchillesSkills directories."
+}

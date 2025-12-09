@@ -58,8 +58,8 @@ function detectClipboardCommands() {
     return null;
 }
 
-// Cache the detected commands
-let cachedCommands = null;
+// Cache the detected commands (undefined = not checked yet, null = no tools found)
+let cachedCommands = undefined;
 
 /**
  * Get clipboard commands, using cached value if available.

@@ -585,9 +585,17 @@
 
                 <h3>Install from source</h3>
                 <pre><code><span class="token-command">git</span> clone https://github.com/OutfinityResearch/skill-manager-cli.git
-<span class="token-command">cd</span> skill-manager-cli
+<span class="token-command">cd</span> skill-manager-cli/skill-manager
 <span class="token-command">npm</span> install
 <span class="token-command">npm</span> link</code></pre>
+
+                <h3>Run as Ploinky Agent</h3>
+                <p>The skill-manager-cli is a ploinky repository with the <code>skill-manager</code> agent inside:</p>
+                <pre><code><span class="token-comment"># Add to your ploinky workspace</span>
+<span class="token-command">ploinky</span> add skill-manager-cli
+
+<span class="token-comment"># Run the skill-manager agent</span>
+<span class="token-command">ploinky</span> run skill-manager</code></pre>
 
                 <h3>Environment Setup</h3>
                 <p>Set an API key for at least one of the supported LLM providers:</p>
@@ -1948,9 +1956,22 @@ Generate clean ESM code with JSDoc comments.</code></pre>
 │   └─────────────────┘        └─────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘</code></pre>
 
+                <h3>Repository Structure</h3>
+                <pre><code>skill-manager-cli/           <span class="token-comment"># Ploinky repository</span>
+├── CLAUDE.md               <span class="token-comment"># Architecture documentation</span>
+├── docs/                   <span class="token-comment"># This documentation</span>
+├── tests/                  <span class="token-comment"># Test files</span>
+└── skill-manager/          <span class="token-comment"># Ploinky agent</span>
+    ├── manifest.json       <span class="token-comment"># Agent manifest</span>
+    ├── scripts/            <span class="token-comment"># Install scripts</span>
+    ├── src/                <span class="token-comment"># Source code</span>
+    │   ├── index.mjs       <span class="token-comment"># Entry point</span>
+    │   └── .AchillesSkills/ <span class="token-comment"># Built-in skills</span>
+    └── bin/                <span class="token-comment"># CLI binaries</span></code></pre>
+
                 <h3>Two-Layer Skill Discovery</h3>
                 <ol>
-                    <li><strong>Built-in Skills</strong> - Bundled with CLI in <code>src/.AchillesSkills/</code></li>
+                    <li><strong>Built-in Skills</strong> - Bundled with CLI in <code>skill-manager/src/.AchillesSkills/</code></li>
                     <li><strong>User Skills</strong> - Project-specific in <code>.AchillesSkills/</code></li>
                 </ol>
                 <p>User skills can override built-in skills of the same name.</p>

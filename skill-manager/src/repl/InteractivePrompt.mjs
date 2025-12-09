@@ -91,14 +91,58 @@ export class InteractivePrompt {
 
             process.stdin.setRawMode(true);
             process.stdin.resume();
+            LineEditor.enableBracketedPaste();
 
             const cleanup = () => {
+                LineEditor.disableBracketedPaste();
                 process.stdin.setRawMode(false);
                 process.stdin.removeListener('data', handleKey);
             };
 
+            // Track bracketed paste state
+            let inBracketedPaste = false;
+            let pasteBuffer = '';
+
             const handleKey = async (key) => {
                 const keyStr = key.toString();
+
+                // Handle bracketed paste mode
+                const PASTE_START = '\x1b[200~';
+                const PASTE_END = '\x1b[201~';
+
+                // Check for paste start marker
+                if (keyStr.includes(PASTE_START)) {
+                    inBracketedPaste = true;
+                    // Extract content after the start marker
+                    const startIdx = keyStr.indexOf(PASTE_START) + PASTE_START.length;
+                    const endIdx = keyStr.indexOf(PASTE_END);
+                    if (endIdx !== -1) {
+                        // Complete paste in one chunk
+                        const pastedText = keyStr.substring(startIdx, endIdx);
+                        editor.handleBracketedPaste(pastedText);
+                        editor.render();
+                        inBracketedPaste = false;
+                    } else {
+                        // Paste continues in next chunk
+                        pasteBuffer = keyStr.substring(startIdx);
+                    }
+                    return;
+                }
+
+                // Check for paste end marker (multi-chunk paste)
+                if (inBracketedPaste) {
+                    const endIdx = keyStr.indexOf(PASTE_END);
+                    if (endIdx !== -1) {
+                        pasteBuffer += keyStr.substring(0, endIdx);
+                        editor.handleBracketedPaste(pasteBuffer);
+                        editor.render();
+                        pasteBuffer = '';
+                        inBracketedPaste = false;
+                    } else {
+                        pasteBuffer += keyStr;
+                    }
+                    return;
+                }
 
                 // Handle Ctrl+C
                 if (keyStr === '\x03') {
