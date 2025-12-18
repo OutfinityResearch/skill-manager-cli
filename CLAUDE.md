@@ -108,11 +108,11 @@ skill-manager-cli/           # Ploinky repository (outer)
 │              ▼                        ▼                        ▼                │
 │  ┌───────────────────┐  ┌───────────────────┐  ┌───────────────────────┐       │
 │  │ LLMAgent          │  │ Skill Subsystems  │  │ Utils                 │       │
-│  │ • Model invocation│  │ • CodeSkills      │  │ • ActionReporter      │       │
-│  │ • Multi-provider  │  │ • Orchestrator    │  │ • DebugLogger         │       │
-│  │ • Fast/Deep modes │  │ • Interactive     │  │ • Sanitiser           │       │
-│  └───────────────────┘  │ • DBTable         │  │ • FlexSearch          │       │
-│                         │ • MCP             │  └───────────────────────┘       │
+│  │ • Model invocation│  │ • CodeGeneration  │  │ • ActionReporter      │       │
+│  │ • Multi-provider  │  │ • Code            │  │ • DebugLogger         │       │
+│  │ • Fast/Deep modes │  │ • Orchestrator    │  │ • Sanitiser           │       │
+│  └───────────────────┘  │ • Interactive     │  │ • FlexSearch          │       │
+│                         │ • DBTable, MCP    │  └───────────────────────┘       │
 │                         └───────────────────┘                                   │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -124,7 +124,7 @@ skill-manager-cli/           # Ploinky repository (outer)
 │                                                                                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
 │  │  skill-manager  │  │  list-skills    │  │  read-skill     │                  │
-│  │  (Orchestrator) │  │  (Code Skill)   │  │  (Code Skill)   │                  │
+│  │  (Orchestrator) │  │  (CodeGen)      │  │  (CodeGen)      │                  │
 │  │                 │  │                 │  │                 │                  │
 │  │  Routes all     │  │  Lists catalog  │  │  Reads .md      │                  │
 │  │  user requests  │  │  entries        │  │  definitions    │                  │
@@ -132,7 +132,7 @@ skill-manager-cli/           # Ploinky repository (outer)
 │                                                                                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
 │  │  write-skill    │  │  validate-skill │  │  generate-code  │                  │
-│  │  (Code Skill)   │  │  (Code Skill)   │  │  (Code Skill)   │                  │
+│  │  (CodeGen)      │  │  (CodeGen)      │  │  (CodeGen)      │                  │
 │  │                 │  │                 │  │                 │                  │
 │  │  Creates/updates│  │  Schema checks  │  │  .md → .mjs     │                  │
 │  │  skill files    │  │                 │  │  conversion     │                  │
@@ -140,7 +140,7 @@ skill-manager-cli/           # Ploinky repository (outer)
 │                                                                                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
 │  │  skill-refiner  │  │  test-code      │  │  execute-skill  │                  │
-│  │  (Orchestrator) │  │  (Code Skill)   │  │  (Code Skill)   │                  │
+│  │  (Orchestrator) │  │  (CodeGen)      │  │  (CodeGen)      │                  │
 │  │                 │  │                 │  │                 │                  │
 │  │  Iterative      │  │  Runs tests     │  │  Direct skill   │                  │
 │  │  improvement    │  │  in sandbox     │  │  invocation     │                  │
@@ -297,7 +297,8 @@ achilles-agent-lib/
 │       └── reloadSkills()         # NEW: Re-discover and re-register
 │
 ├── *SkillsSubsystem/              # Skill type handlers
-│   ├── CodeSkillsSubsystem        # cskill: LLM-generated code
+│   ├── CodeGenerationSkillsSubsystem # cgskill: Hand-written module or LLM runtime
+│   ├── CodeSkillsSubsystem        # cskill: Spec-based code generation
 │   ├── OrchestratorSkillsSubsystem # oskill: Skill routing
 │   ├── InteractiveSkillsSubsystem  # iskill: Conversational
 │   ├── DBTableSkillsSubsystem      # tskill: Database entities
@@ -345,12 +346,13 @@ This enables multi-source skill discovery without wrapper classes. The CLI uses 
 
 ### 2. Skill Type System
 
-**Decision:** Five distinct skill types with different execution models.
+**Decision:** Six distinct skill types with different execution models.
 
 | Type | File | Purpose |
 |------|------|---------|
 | `tskill` | `tskill.md` | Database table entities with validators/presenters |
-| `cskill` | `cskill.md` | LLM generates and executes code on-the-fly |
+| `cskill` | `cskill.md` | LLM generates code from specs/ folder during discovery |
+| `cgskill` | `cgskill.md` | Code generation skill - uses hand-written module or LLM runtime decision |
 | `iskill` | `iskill.md` | Interactive conversations with user input collection |
 | `oskill` | `oskill.md` | Orchestrators that route to other skills |
 | `mskill` | `mskill.md` | MCP (Model Context Protocol) tool integration |
@@ -358,6 +360,8 @@ This enables multi-source skill discovery without wrapper classes. The CLI uses 
 **Rationale:**
 - Different use cases require different execution models
 - Allows specialized handling (code gen for tskill, routing for oskill)
+- cgskill provides deterministic execution with hand-written modules
+- cskill supports complex business logic from natural language specs
 - Clear mental model for skill authors
 - Enables type-specific validation and templates
 
@@ -485,18 +489,18 @@ The CLI ships with these built-in skills in `skill-manager/src/.AchillesSkills/`
 | Skill | Type | Purpose |
 |-------|------|---------|
 | `skill-manager` | oskill | Main orchestrator—routes all user requests |
-| `list-skills` | cskill | Lists skills in the catalog |
-| `read-skill` | cskill | Reads skill definition content |
-| `write-skill` | cskill | Creates/updates skill files |
-| `delete-skill` | cskill | Removes skill directories |
-| `validate-skill` | cskill | Validates against schema |
-| `get-template` | cskill | Returns blank skill templates |
-| `update-section` | cskill | Updates specific sections |
-| `preview-changes` | cskill | Shows diff before applying |
-| `generate-code` | cskill | Generates `.mjs` from definitions |
-| `test-code` | cskill | Tests generated code |
+| `list-skills` | cgskill | Lists skills in the catalog |
+| `read-skill` | cgskill | Reads skill definition content |
+| `write-skill` | cgskill | Creates/updates skill files |
+| `delete-skill` | cgskill | Removes skill directories |
+| `validate-skill` | cgskill | Validates against schema |
+| `get-template` | cgskill | Returns blank skill templates |
+| `update-section` | cgskill | Updates specific sections |
+| `preview-changes` | cgskill | Shows diff before applying |
+| `generate-code` | cgskill | Generates `.mjs` from definitions |
+| `test-code` | cgskill | Tests generated code |
 | `skill-refiner` | oskill | Iterative improvement loop |
-| `execute-skill` | cskill | Executes any skill directly |
+| `execute-skill` | cgskill | Executes any skill directly |
 
 ### Skill Specifications (`.specs.md`)
 
@@ -539,7 +543,7 @@ Skills can optionally include a `.specs.md` file that defines requirements and c
        ▼
 3. registerSkillsFromRoot() for each root
    • Iterates subdirectories
-   • Looks for recognized skill files (tskill.md, cskill.md, etc.)
+   • Looks for recognized skill files (tskill.md, cgskill.md, cskill.md, etc.)
        │
        ▼
 4. parseSkillDocument() extracts metadata
@@ -548,6 +552,7 @@ Skills can optionally include a `.specs.md` file that defines requirements and c
        │
        ▼
 5. ensureSubsystem() creates appropriate handler
+   • CodeGenerationSkillsSubsystem for cgskill
    • CodeSkillsSubsystem for cskill
    • OrchestratorSkillsSubsystem for oskill
    • etc.
@@ -602,8 +607,8 @@ User types: "list all skills"
        │
        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ list-skills (cskill)                                        │
-│ • CodeSkillsSubsystem executes                              │
+│ list-skills (cgskill)                                       │
+│ • CodeGenerationSkillsSubsystem executes                    │
 │ • Returns formatted skill list                              │
 └─────────────────────────────────────────────────────────────┘
        │
@@ -645,7 +650,7 @@ User types: "/read my-skill"
        │
        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ CodeSkillsSubsystem executes read-skill                     │
+│ CodeGenerationSkillsSubsystem executes read-skill           │
 │ • Reads skill file content                                  │
 │ • Returns formatted result                                  │
 └─────────────────────────────────────────────────────────────┘
