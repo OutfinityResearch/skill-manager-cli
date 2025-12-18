@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { RecursiveSkilledAgent } from 'achillesAgentLib/RecursiveSkilledAgents';
@@ -12,6 +13,7 @@ import { SlashCommandHandler } from './repl/SlashCommandHandler.mjs';
 import { REPLSession } from './repl/REPLSession.mjs';
 import { summarizeResult, formatSlashResult } from './ui/ResultFormatter.mjs';
 import { printHelp as printREPLHelp, showHistory, searchHistory } from './ui/HelpPrinter.mjs';
+import { RepoManager } from './lib/RepoManager.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +36,8 @@ export {
     buildCommandList,
     // History
     HistoryManager,
+    // Repository management
+    RepoManager,
     // Utilities
     summarizeResult,
     formatSlashResult,
@@ -55,12 +59,24 @@ async function main() {
     let debug = false;
     let mode = 'deep';
     let renderMarkdown = true;
+    const cliSkillRoots = []; // Skill roots from --skill-root flags
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg === '--dir' || arg === '-d') {
             workingDir = path.resolve(args[i + 1] || process.cwd());
             i += 1;
+        } else if (arg === '--skill-root' || arg === '-r') {
+            const rootPath = args[i + 1];
+            if (rootPath && !rootPath.startsWith('-')) {
+                cliSkillRoots.push(path.resolve(rootPath));
+                i += 1;
+            }
+        } else if (arg.startsWith('--skill-root=')) {
+            const rootPath = arg.split('=')[1];
+            if (rootPath) {
+                cliSkillRoots.push(path.resolve(rootPath));
+            }
         } else if (arg === '--help' || arg === '-h') {
             printHelp();
             process.exit(0);
@@ -98,16 +114,32 @@ async function main() {
         logger.log?.(`Created .AchillesSkills directory at ${skillsDir}`);
     }
 
+    // Initialize RepoManager for external skill repositories
+    const globalReposDir = path.join(os.homedir(), '.skill-manager', 'repos');
+    const repoManager = new RepoManager({ workingDir, globalReposDir, logger });
+    const configSkillRoots = repoManager.getEnabledSkillRoots();
+
+    // Merge all skill roots: built-in + CLI flags + config file repos
+    const allSkillRoots = [
+        builtInSkillsDir,
+        ...cliSkillRoots,
+        ...configSkillRoots,
+    ];
+
+    if (verbose && (cliSkillRoots.length > 0 || configSkillRoots.length > 0)) {
+        logger.log(`Additional skill roots: ${[...cliSkillRoots, ...configSkillRoots].join(', ')}`);
+    }
+
     // Initialize LLM Agent
     const llmAgent = new LLMAgent({
         name: 'skill-manager-agent',
     });
 
-    // Initialize RecursiveSkilledAgent with built-in skills
+    // Initialize RecursiveSkilledAgent with all skill roots
     const agent = new RecursiveSkilledAgent({
         llmAgent,
         startDir: workingDir,
-        additionalSkillRoots: [builtInSkillsDir],
+        additionalSkillRoots: allSkillRoots,
         logger,
     });
 
@@ -124,6 +156,7 @@ async function main() {
                 skilledAgent: agent,
                 llmAgent,
                 logger,
+                repoManager,
             };
 
             let result = await agent.executePrompt(prompt, {
@@ -173,6 +206,7 @@ async function main() {
             builtInSkillsDir,
             debug,
             renderMarkdown,
+            repoManager,
         });
         await session.start();
     }
@@ -189,14 +223,15 @@ USAGE:
   skill-manager [options] [prompt]
 
 OPTIONS:
-  -d, --dir <path>   Working directory containing .AchillesSkills (default: cwd)
-  -v, --verbose      Enable verbose logging
-  --debug            Show full JSON output (orchestrator plans, executions)
-  --fast             Use fast LLM mode (cheaper, quicker)
-  --deep             Use deep LLM mode (default, more capable)
-  --no-markdown      Disable markdown rendering in output (use /raw to toggle)
-  -h, --help         Show this help message
-  --version          Show version
+  -d, --dir <path>       Working directory containing .AchillesSkills (default: cwd)
+  -r, --skill-root <path>  Add additional skill root (can be used multiple times)
+  -v, --verbose          Enable verbose logging
+  --debug                Show full JSON output (orchestrator plans, executions)
+  --fast                 Use fast LLM mode (cheaper, quicker)
+  --deep                 Use deep LLM mode (default, more capable)
+  --no-markdown          Disable markdown rendering in output (use /raw to toggle)
+  -h, --help             Show this help message
+  --version              Show version
 
 MODES:
   REPL Mode          Run without a prompt to enter interactive mode
@@ -227,6 +262,16 @@ SKILL TYPES:
   oskill   Orchestrator (routes to other skills)
   mskill   MCP tool integration
 
+EXTERNAL REPOSITORIES:
+  Add external skill repositories via REPL commands:
+    /add-repo <git-url|path>   Add git repo or local path
+    /repos                     List configured repositories
+    /update-repo [name|all]    Update git repositories
+    /remove-repo <name>        Remove a repository
+
+  Or via CLI flags for session-only skill roots:
+    skill-manager -r /path/to/skills -r /another/path
+
 EXAMPLES:
   # Start interactive REPL
   skill-manager
@@ -241,6 +286,9 @@ EXAMPLES:
   skill-manager "test the generated code for equipment"
   skill-manager "refine equipment until all tests pass"
   skill-manager --fast "list skills"
+
+  # With additional skill roots
+  skill-manager -r ~/shared-skills "list all skills"
 
 ENVIRONMENT:
   ANTHROPIC_API_KEY    API key for Claude (required)

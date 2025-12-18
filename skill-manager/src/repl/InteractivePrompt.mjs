@@ -218,10 +218,17 @@ export class InteractivePrompt {
                                 process.stdin.on('data', handleKey);
                             }
                         } else {
-                            // Command doesn't need skill arg - execute directly
-                            cleanup();
-                            process.stdout.write(`${selected.name}\n`);
-                            resolve(selected.name);
+                            // Check if command requires text arguments
+                            const cmdDef = SlashCommandHandler.COMMANDS[selected.name.slice(1)]; // Remove leading /
+                            if (cmdDef && cmdDef.args === 'required') {
+                                // Command needs arguments - prompt for them
+                                await self._handleArgInputFlow(selected.name, cmdDef, resolve, cleanup);
+                            } else {
+                                // Command doesn't need args - execute directly
+                                cleanup();
+                                process.stdout.write(`${selected.name}\n`);
+                                resolve(selected.name);
+                            }
                         }
                     } else {
                         // User cancelled - return to normal prompt
@@ -291,6 +298,23 @@ export class InteractivePrompt {
                     return null;
                 };
 
+                // Helper to check if buffer is a command needing text args (not skill args)
+                const getCommandNeedingTextArg = () => {
+                    const buf = editor.getBuffer();
+                    if (!buf.startsWith('/')) return null;
+                    const parsed = self.slashHandler.parseSlashCommand(buf);
+                    if (!parsed) return null;
+                    const { command, args } = parsed;
+                    // Only trigger if no args yet (just the command)
+                    if (args && args.trim()) return null;
+                    const cmdDef = SlashCommandHandler.COMMANDS[command];
+                    // Command needs text args but not skill args
+                    if (cmdDef && cmdDef.args === 'required' && !cmdDef.needsSkillArg) {
+                        return { command, cmdDef };
+                    }
+                    return null;
+                };
+
                 // Helper to show skill selector for current command
                 const showSkillSelectorForCommand = async (command) => {
                     if (showingSelector) return;
@@ -339,11 +363,20 @@ export class InteractivePrompt {
                     }
                 };
 
-                // Handle Tab - show skill selector if command needs skill arg
+                // Handle Tab - show skill selector if command needs skill arg, or prompt for text args
                 if (keyStr === '\t') {
                     const cmdInfo = getCommandNeedingSkillArg();
                     if (cmdInfo) {
                         await showSkillSelectorForCommand(cmdInfo.command);
+                        return;
+                    }
+                    // Check if command needs text args (not skill args)
+                    const textArgInfo = getCommandNeedingTextArg();
+                    if (textArgInfo) {
+                        // Show argument input prompt
+                        process.stdin.removeListener('data', handleKey);
+                        process.stdin.setRawMode(false);
+                        await self._handleArgInputFlow(`/${textArgInfo.command}`, textArgInfo.cmdDef, resolve, cleanup);
                         return;
                     }
                     // Otherwise ignore Tab
@@ -379,6 +412,49 @@ export class InteractivePrompt {
             };
 
             process.stdin.on('data', handleKey);
+        });
+    }
+
+    /**
+     * Handle argument input flow when command requires text arguments (e.g., /add-repo)
+     * @private
+     */
+    async _handleArgInputFlow(commandName, cmdDef, resolve, cleanup) {
+        // Show the command and usage hint
+        process.stdout.write(`${commandName}\n`);
+        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+
+        // Show usage and description
+        process.stdout.write(`\x1b[36m  Usage:\x1b[0m ${cmdDef.usage}\n`);
+        process.stdout.write(`\x1b[36m  About:\x1b[0m ${cmdDef.description}\n`);
+        process.stdout.write('\x1b[90m  Ctrl+C to cancel\x1b[0m\n');
+        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+
+        // Prompt for arguments using readline
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+        });
+
+        let answered = false;
+
+        // Handle Ctrl+C to cancel
+        rl.on('SIGINT', () => {
+            if (answered) return;
+            answered = true;
+            rl.close();
+            process.stdout.write('\n\x1b[33mCancelled\x1b[0m\n');
+            // Resolve with empty string to return to main loop
+            resolve('');
+        });
+
+        rl.question(`${commandName} `, (input) => {
+            if (answered) return;
+            answered = true;
+            rl.close();
+            cleanup();
+            const fullCommand = `${commandName} ${input}`.trim();
+            resolve(fullCommand);
         });
     }
 

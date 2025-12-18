@@ -42,6 +42,13 @@ export const SKILL_TYPES = {
         requiredSections: ['Summary', 'MCP Tools'],
         optionalSections: ['Configuration'],
     },
+    cgskill: {
+        fileName: 'cgskill.md',
+        generatedFileName: null,
+        description: 'Code generation skill - LLM decides text/code or uses hand-written module',
+        requiredSections: ['Summary', 'Prompt'],
+        optionalSections: ['Arguments', 'LLM Mode', 'Examples'],
+    },
 };
 
 export const SKILL_TEMPLATES = {
@@ -290,6 +297,48 @@ When intent is unclear:
 - timeout: 30000
 - retries: 3
 `,
+
+    cgskill: `# [Skill Name]
+
+## Summary
+[One-line description of what this skill does]
+
+## Prompt
+You are a specialized assistant for [task description].
+
+Your responsibilities:
+1. [Primary responsibility]
+2. [Secondary responsibility]
+3. [Additional responsibility]
+
+Input format:
+- [Describe expected input]
+
+Output format:
+- [Describe expected output]
+
+Error handling:
+- [How to handle errors]
+
+## Arguments
+- input: The primary input data to process
+- options: Optional configuration object
+  - format: Output format (json | text | markdown)
+  - verbose: Include detailed output (true | false)
+
+## LLM Mode
+fast
+
+## Examples
+
+### Example 1: Basic usage
+Input: "example input"
+Output: "example output"
+
+### Example 2: With options
+Input: { "data": "...", "options": { "format": "json" } }
+Output: { "result": "..." }
+`,
 };
 
 /**
@@ -403,6 +452,14 @@ export function validateSkillContent(content, skillType = null) {
         const hasLLMMode = /##\s+llm[\s-]+mode/i.test(content);
         if (!hasLLMMode) {
             warnings.push('Code skill should specify ## LLM Mode (fast or deep)');
+        }
+    }
+
+    if (type === 'cgskill') {
+        // Check for LLM mode (accept both "## LLM Mode" and "## LLM-Mode")
+        const hasLLMMode = /##\s+llm[\s-]+mode/i.test(content);
+        if (!hasLLMMode) {
+            warnings.push('Code generation skill should specify ## LLM Mode (fast or deep)');
         }
     }
 

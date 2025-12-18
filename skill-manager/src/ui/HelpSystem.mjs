@@ -120,6 +120,14 @@ ${C.bold}${C.yellow}Slash Commands${C.reset} ${C.dim}(direct skill execution)${C
   ${C.cyan}/raw${C.reset}                     Toggle markdown rendering
   ${C.cyan}/help${C.reset} [topic]            Show help
 
+${C.bold}${C.yellow}Repository Commands${C.reset} ${C.dim}(external skill sources)${C.reset}
+  ${C.cyan}/repos${C.reset}                   List configured repositories
+  ${C.cyan}/add-repo${C.reset} <source>       Add git repo or local path
+  ${C.cyan}/remove-repo${C.reset} <name>      Remove repository
+  ${C.cyan}/update-repo${C.reset} [name|all]  Git pull for repositories
+  ${C.cyan}/enable-repo${C.reset} <name>      Enable a repository
+  ${C.cyan}/disable-repo${C.reset} <name>     Disable a repository
+
 ${C.dim}Type /help <command> for detailed help on any command.${C.reset}
 `,
     },
@@ -138,10 +146,16 @@ ${C.bold}${C.yellow}tskill${C.reset} - Database Table Skill
   ${C.green}Use for:${C.reset} Equipment, Materials, Areas, Jobs, etc.
 
 ${C.bold}${C.yellow}cskill${C.reset} - Code Skill
-  ${C.dim}LLM generates and executes code based on a prompt.${C.reset}
-  ${C.green}File:${C.reset} cskill.md
+  ${C.dim}LLM generates code from specs/ folder during discovery.${C.reset}
+  ${C.green}File:${C.reset} cskill.md + specs/*.md → src/*.mjs
+  ${C.green}Sections:${C.reset} Summary, Input Format, Output Format, Constraints
+  ${C.green}Use for:${C.reset} Complex business logic from natural language specs
+
+${C.bold}${C.yellow}cgskill${C.reset} - Code Generation Skill
+  ${C.dim}LLM decides text/code at runtime or uses hand-written module.${C.reset}
+  ${C.green}File:${C.reset} cgskill.md (+ optional module)
   ${C.green}Sections:${C.reset} Summary, Prompt, Arguments, LLM Mode, Examples
-  ${C.green}Use for:${C.reset} Data processing, transformations, utilities
+  ${C.green}Use for:${C.reset} Utilities, agent API access, deterministic tools
 
 ${C.bold}${C.yellow}iskill${C.reset} - Interactive Skill
   ${C.dim}Conversational commands with user input collection.${C.reset}
@@ -441,6 +455,50 @@ ${C.dim}Tip: Use natural language for complex tasks, slash commands for speed.${
 `,
     },
 
+    // Repositories
+    repositories: {
+        title: 'External Skill Repositories',
+        aliases: ['repos', 'repo', 'external', 'git'],
+        content: `
+${C.bold}${C.cyan}External Skill Repositories${C.reset}
+
+Skill Manager can load skills from external repositories, including git
+repositories and local filesystem paths.
+
+${C.bold}${C.yellow}Listing Repositories:${C.reset}
+  ${C.green}>${C.reset} /repos                    ${C.dim}List all configured repositories${C.reset}
+
+${C.bold}${C.yellow}Adding Repositories:${C.reset}
+  ${C.green}>${C.reset} /add-repo <git-url>       ${C.dim}Clone and add git repository${C.reset}
+  ${C.green}>${C.reset} /add-repo <local-path>    ${C.dim}Add local directory${C.reset}
+  ${C.green}>${C.reset} /add-repo <url> my-name   ${C.dim}Add with custom name${C.reset}
+
+${C.bold}${C.yellow}Managing Repositories:${C.reset}
+  ${C.green}>${C.reset} /update-repo all          ${C.dim}Git pull all repositories${C.reset}
+  ${C.green}>${C.reset} /update-repo <name>       ${C.dim}Git pull specific repository${C.reset}
+  ${C.green}>${C.reset} /enable-repo <name>       ${C.dim}Enable a disabled repository${C.reset}
+  ${C.green}>${C.reset} /disable-repo <name>      ${C.dim}Disable without removing${C.reset}
+  ${C.green}>${C.reset} /remove-repo <name>       ${C.dim}Remove from config${C.reset}
+  ${C.green}>${C.reset} /remove-repo <name> --delete  ${C.dim}Remove and delete files${C.reset}
+
+${C.bold}${C.yellow}CLI Flags:${C.reset}
+  ${C.cyan}--skill-root <path>${C.reset}       Add skill root for this session only
+  ${C.cyan}-r <path>${C.reset}                 Short form of --skill-root
+
+${C.bold}${C.yellow}Storage Locations:${C.reset}
+  ${C.green}Config:${C.reset}    .skill-manager.json ${C.dim}(in working directory)${C.reset}
+  ${C.green}Clones:${C.reset}    ~/.skill-manager/repos/ ${C.dim}(global storage)${C.reset}
+
+${C.bold}${C.yellow}Example: Adding AchillesCLI Skills${C.reset}
+  ${C.green}>${C.reset} /add-repo https://github.com/OutfinityResearch/AchillesCLI.git
+  ${C.dim}Cloning repository...
+  Repository "outfinityresearch-achillescli" added. 5 skill(s) found.
+  Skills have been reloaded.${C.reset}
+
+${C.dim}Repositories must contain a .AchillesSkills directory.${C.reset}
+`,
+    },
+
     // Topics list
     topics: {
         title: 'Help Topics',
@@ -455,6 +513,7 @@ ${C.bold}${C.cyan}Available Help Topics${C.reset}
   ${C.green}/help tskill${C.reset}            Database table skills in detail
   ${C.green}/help specs${C.reset}             Using .specs.md files
   ${C.green}/help testing${C.reset}           Testing and refinement
+  ${C.green}/help repositories${C.reset}      External skill repositories
   ${C.green}/help natural-language${C.reset}  Using natural language
   ${C.green}/help shortcuts${C.reset}         Keyboard shortcuts
   ${C.green}/help workflows${C.reset}         Common workflows and patterns
@@ -490,7 +549,7 @@ ${C.bold}${C.yellow}Description:${C.reset}
 
 ${C.bold}${C.yellow}Output:${C.reset}
   Each skill shows: [type] skill-name
-  Types: tskill, cskill, iskill, oskill, mskill
+  Types: tskill, cskill, cgskill, iskill, oskill, mskill
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /ls
@@ -536,7 +595,8 @@ ${C.bold}${C.yellow}Usage:${C.reset}
 
 ${C.bold}${C.yellow}Skill Types:${C.reset}
   ${C.cyan}tskill${C.reset}  - Database table skill
-  ${C.cyan}cskill${C.reset}  - Code skill (LLM generates code)
+  ${C.cyan}cskill${C.reset}  - Code skill (LLM generates from specs)
+  ${C.cyan}cgskill${C.reset} - Code generation skill (module or runtime LLM)
   ${C.cyan}iskill${C.reset}  - Interactive skill
   ${C.cyan}oskill${C.reset}  - Orchestrator skill
   ${C.cyan}mskill${C.reset}  - MCP tool skill
@@ -772,14 +832,15 @@ ${C.bold}${C.yellow}Usage:${C.reset}
 
 ${C.bold}${C.yellow}Types:${C.reset}
   ${C.cyan}tskill${C.reset}  - Database table skill template
-  ${C.cyan}cskill${C.reset}  - Code skill template
+  ${C.cyan}cskill${C.reset}  - Code skill template (spec-based)
+  ${C.cyan}cgskill${C.reset} - Code generation skill template
   ${C.cyan}iskill${C.reset}  - Interactive skill template
   ${C.cyan}oskill${C.reset}  - Orchestrator skill template
   ${C.cyan}mskill${C.reset}  - MCP skill template
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /template tskill
-  ${C.green}>${C.reset} /template cskill
+  ${C.green}>${C.reset} /template cgskill
 
 ${C.bold}${C.yellow}Output:${C.reset}
   Displays the full template text that you can copy and customize.
@@ -852,6 +913,166 @@ ${C.bold}${C.yellow}Examples:${C.reset}
   ✗ area (2 passed, 1 failed)
 
   Total: 3 tests, 10 passed, 1 failed${C.reset}
+`,
+    },
+
+    // Repository management commands
+    repos: {
+        title: '/repos - List Repositories',
+        content: `
+${C.bold}${C.cyan}/repos - List Configured Repositories${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/repos${C.reset}
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Lists all external skill repositories configured in .skill-manager.json.
+  Shows each repository's name, source, path, and enabled status.
+
+${C.bold}${C.yellow}Output:${C.reset}
+  ${C.dim}✓ 🔗 achilles-cli
+     Source: https://github.com/OutfinityResearch/AchillesCLI.git
+     Path: ~/.skill-manager/repos/achilles-cli
+     Status: enabled
+
+  ✗ 📁 local-skills
+     Source: /path/to/local/skills
+     Path: /path/to/local/skills
+     Status: disabled${C.reset}
+
+${C.dim}See /help repositories for more about external skill repositories.${C.reset}
+`,
+    },
+
+    'add-repo': {
+        title: '/add-repo - Add Repository',
+        content: `
+${C.bold}${C.cyan}/add-repo - Add External Skill Repository${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/add-repo <git-url>${C.reset}         Clone git repository
+  ${C.green}/add-repo <local-path>${C.reset}      Add local directory
+  ${C.green}/add-repo <source> <name>${C.reset}   Add with custom name
+  ${C.green}/add-repo <source> --force${C.reset}  Overwrite existing repo
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Adds an external skill repository. For git URLs, the repository is
+  cloned to ~/.skill-manager/repos/. Local paths are referenced directly.
+
+${C.bold}${C.yellow}Requirements:${C.reset}
+  ${C.green}•${C.reset} Repository must contain a .AchillesSkills directory
+  ${C.green}•${C.reset} Git must be installed for cloning git repositories
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /add-repo https://github.com/OutfinityResearch/AchillesCLI.git
+  ${C.green}>${C.reset} /add-repo /path/to/local/skills my-skills
+  ${C.green}>${C.reset} /add-repo git@github.com:user/repo.git --force
+
+${C.bold}${C.yellow}After Adding:${C.reset}
+  Skills are automatically reloaded and available for use.
+`,
+    },
+
+    'remove-repo': {
+        title: '/remove-repo - Remove Repository',
+        content: `
+${C.bold}${C.cyan}/remove-repo - Remove Repository${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/remove-repo <name>${C.reset}           Remove from config only
+  ${C.green}/remove-repo <name> --delete${C.reset}  Also delete cloned files
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Removes a repository from the configuration. By default, cloned files
+  are kept in ~/.skill-manager/repos/. Use --delete to remove files too.
+
+${C.bold}${C.yellow}Flags:${C.reset}
+  ${C.cyan}--delete${C.reset}, ${C.cyan}-d${C.reset}  Delete cloned repository files
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /remove-repo achilles-cli
+  ${C.dim}Repository "achilles-cli" removed${C.reset}
+
+  ${C.green}>${C.reset} /remove-repo achilles-cli --delete
+  ${C.dim}Repository "achilles-cli" removed and files deleted${C.reset}
+
+${C.bold}${C.yellow}Note:${C.reset}
+  Local path repositories are never deleted, only removed from config.
+`,
+    },
+
+    'update-repo': {
+        title: '/update-repo - Update Repository',
+        content: `
+${C.bold}${C.cyan}/update-repo - Update Repository (Git Pull)${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/update-repo${C.reset}         Update all git repositories
+  ${C.green}/update-repo all${C.reset}     Update all git repositories
+  ${C.green}/update-repo <name>${C.reset}  Update specific repository
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Pulls latest changes from git for remote repositories.
+  Local path repositories are skipped.
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /update-repo all
+  ${C.dim}✓ Updated 2/2 repositories
+    ✓ achilles-cli
+    ✓ shared-skills
+  Skills have been reloaded.${C.reset}
+
+  ${C.green}>${C.reset} /update-repo achilles-cli
+  ${C.dim}Repository "achilles-cli" updated
+  Skills have been reloaded.${C.reset}
+`,
+    },
+
+    'enable-repo': {
+        title: '/enable-repo - Enable Repository',
+        content: `
+${C.bold}${C.cyan}/enable-repo - Enable a Disabled Repository${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/enable-repo <name>${C.reset}
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Enables a repository that was previously disabled. The repository's
+  skills will be loaded and available for use.
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /enable-repo achilles-cli
+  ${C.dim}Repository "achilles-cli" enabled
+  Skills have been reloaded.${C.reset}
+
+${C.dim}See also: /disable-repo, /repos${C.reset}
+`,
+    },
+
+    'disable-repo': {
+        title: '/disable-repo - Disable Repository',
+        content: `
+${C.bold}${C.cyan}/disable-repo - Disable Repository${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/disable-repo <name>${C.reset}
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Disables a repository without removing it from the configuration.
+  The repository's skills will no longer be loaded, but the config
+  and cloned files remain intact.
+
+${C.bold}${C.yellow}When to Use:${C.reset}
+  ${C.green}•${C.reset} Temporarily exclude a repository's skills
+  ${C.green}•${C.reset} Troubleshoot skill conflicts
+  ${C.green}•${C.reset} Speed up startup by reducing loaded skills
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /disable-repo achilles-cli
+  ${C.dim}Repository "achilles-cli" disabled
+  Skills have been reloaded.${C.reset}
+
+${C.dim}See also: /enable-repo, /remove-repo${C.reset}
 `,
     },
 };

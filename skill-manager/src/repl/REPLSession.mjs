@@ -32,6 +32,7 @@ export class REPLSession {
      * @param {string} [options.skillsDir] - Skills directory path (defaults to workingDir/.AchillesSkills)
      * @param {string} [options.builtInSkillsDir] - Built-in skills directory (for filtering user skills)
      * @param {HistoryManager} [options.historyManager] - Command history manager (created if not provided)
+     * @param {RepoManager} [options.repoManager] - Repository manager for external skill repos
      * @param {boolean} [options.debug] - Enable debug mode
      */
     constructor(agent, options = {}) {
@@ -49,6 +50,9 @@ export class REPLSession {
             workingDir: this.workingDir,
         });
 
+        // Repository manager for external skills
+        this.repoManager = options.repoManager || null;
+
         // Context for skill execution
         this.context = {
             workingDir: this.workingDir,
@@ -56,6 +60,7 @@ export class REPLSession {
             skilledAgent: agent,
             llmAgent: agent.llmAgent,
             logger: agent.logger,
+            repoManager: this.repoManager,
         };
 
         // Create slash command handler with callbacks
@@ -63,6 +68,7 @@ export class REPLSession {
             executeSkill: (skillName, input, opts) => this._executeSkill(skillName, input, opts),
             getUserSkills: () => this.getUserSkills(),
             getSkills: () => agent.getSkills(),
+            getRepositories: () => this.repoManager?.listRepositories() || [],
         });
 
         // Build command list for interactive selector

@@ -31,7 +31,7 @@ export async function action(recursiveSkilledAgent, prompt) {
         return 'Error: skillName is required';
     }
     if (!fileName) {
-        return 'Error: fileName is required (e.g., cskill.md, tskill.md)';
+        return 'Error: fileName is required (e.g., cgskill.md, tskill.md, cskill.md)';
     }
     if (content === undefined || content === null) {
         return 'Error: content is required';
