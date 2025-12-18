@@ -17,9 +17,9 @@ export const SKILL_TYPES = {
     cskill: {
         fileName: 'cskill.md',
         generatedFileName: null, // Uses separate .js file
-        description: 'Code skill - LLM generates and executes code based on prompt',
-        requiredSections: ['Summary', 'Prompt'],
-        optionalSections: ['Arguments', 'LLM Mode', 'Examples'],
+        description: 'Code skill - LLM generates and executes code based on specs',
+        requiredSections: ['Summary', 'Input Format', 'Output Format'],
+        optionalSections: ['Constraints', 'Examples'],
     },
     iskill: {
         fileName: 'iskill.md',
@@ -47,7 +47,7 @@ export const SKILL_TYPES = {
         generatedFileName: null,
         description: 'Code generation skill - LLM decides text/code or uses hand-written module',
         requiredSections: ['Summary', 'Prompt'],
-        optionalSections: ['Arguments', 'LLM Mode', 'Examples'],
+        optionalSections: ['Argument', 'LLM-Mode', 'Examples'],
     },
 };
 
@@ -146,44 +146,36 @@ Must be one of the enumerated values.
 
     cskill: `# [Skill Name]
 
-## Summary
 [One-line description of what this skill does]
 
-## Prompt
-You are a specialized assistant for [task description].
+## Summary
+[Brief description of the skill's purpose and capabilities]
 
-Your responsibilities:
-1. [Primary responsibility]
-2. [Secondary responsibility]
-3. [Additional responsibility]
+## Input Format
+- **param1**: Description of first parameter
+  - Type: string | number | object
+  - Required: true | false
+- **param2**: Description of second parameter (optional)
 
-Input format:
-- [Describe expected input]
+## Output Format
+- **Type**: string | object | array
+- **Success Example**: "Expected successful output"
+- **Error Example**: "Error: Description of error case"
 
-Output format:
-- [Describe expected output]
-
-Error handling:
-- [How to handle errors]
-
-## Arguments
-- input: The primary input data to process
-- options: Optional configuration object
-  - format: Output format (json | text | markdown)
-  - verbose: Include detailed output (true | false)
-
-## LLM Mode
-fast
+## Constraints
+- [Constraint 1: e.g., "Must handle null/undefined inputs gracefully"]
+- [Constraint 2: e.g., "Maximum input length: 1000 characters"]
+- [Constraint 3: e.g., "Must return within 5 seconds"]
 
 ## Examples
 
 ### Example 1: Basic usage
-Input: "example input"
-Output: "example output"
+- **Input**: \`"example input"\`
+- **Expected Output**: \`"example output"\`
 
 ### Example 2: With options
-Input: { "data": "...", "options": { "format": "json" } }
-Output: { "result": "..." }
+- **Input**: \`{ "data": "...", "options": { "format": "json" } }\`
+- **Expected Output**: \`{ "result": "..." }\`
 `,
 
     iskill: `# [Skill Name]
@@ -382,9 +374,14 @@ export function detectSkillType(content) {
         return 'mskill';
     }
 
-    // Default to code skill if has summary and prompt
-    if (contentLower.includes('## summary') && contentLower.includes('## prompt')) {
+    // Check for code skill (cskill) - has Input Format and Output Format
+    if (contentLower.includes('## input format') && contentLower.includes('## output format')) {
         return 'cskill';
+    }
+
+    // Check for code generation skill (cgskill) - has Summary and Prompt
+    if (contentLower.includes('## summary') && contentLower.includes('## prompt')) {
+        return 'cgskill';
     }
 
     return null;
@@ -448,11 +445,8 @@ export function validateSkillContent(content, skillType = null) {
     }
 
     if (type === 'cskill') {
-        // Check for LLM mode (accept both "## LLM Mode" and "## LLM-Mode")
-        const hasLLMMode = /##\s+llm[\s-]+mode/i.test(content);
-        if (!hasLLMMode) {
-            warnings.push('Code skill should specify ## LLM Mode (fast or deep)');
-        }
+        // cskill uses Input Format and Output Format sections
+        // No additional validation needed beyond required sections
     }
 
     if (type === 'cgskill') {
