@@ -282,9 +282,10 @@ export class RepoManager {
      * @param {string} [options.name] - Optional name (auto-generated if not provided)
      * @param {string} [options.branch] - Branch for git repos
      * @param {boolean} [options.force] - Overwrite existing repo with same name
+     * @param {boolean} [options.editable] - Allow skill management operations on this repo's skills
      * @returns {Promise<{success: boolean, message: string, name: string, skillCount: number}>}
      */
-    async addRepository({ source, name, branch = 'main', force = false }) {
+    async addRepository({ source, name, branch = 'main', force = false, editable = false }) {
         if (!source) {
             throw new Error('Repository source is required');
         }
@@ -352,6 +353,7 @@ export class RepoManager {
             skillsPath: validation.skillsPath,
             branch: type === 'git' ? branch : undefined,
             enabled: true,
+            editable: editable,
             addedAt: new Date().toISOString(),
         };
 
@@ -463,6 +465,30 @@ export class RepoManager {
     }
 
     /**
+     * Set a repository's editable status.
+     * When editable is false, skills from this repo cannot be listed, read, or modified
+     * by skill management operations (but can still be executed).
+     *
+     * @param {string} name - Repository name
+     * @param {boolean} editable - Allow skill management operations
+     * @returns {{success: boolean, message: string}}
+     */
+    setRepositoryEditable(name, editable) {
+        const repo = this.config.repositories.find((r) => r.name === name);
+        if (!repo) {
+            throw new Error(`Repository "${name}" not found`);
+        }
+
+        repo.editable = editable;
+        this.saveConfig();
+
+        return {
+            success: true,
+            message: `Repository "${name}" ${editable ? 'can now be edited' : 'is now read-only'}`,
+        };
+    }
+
+    /**
      * List all configured repositories.
      *
      * @returns {Array}
@@ -475,6 +501,7 @@ export class RepoManager {
             localPath: r.localPath,
             skillsPath: r.skillsPath,
             enabled: r.enabled,
+            editable: r.editable || false,
             addedAt: r.addedAt,
         }));
     }
@@ -514,6 +541,70 @@ export class RepoManager {
         this.saveConfig();
 
         return roots;
+    }
+
+    /**
+     * Get skill root paths for repositories that are both enabled AND editable.
+     * Skills from these repos can be listed, read, and modified by skill management operations.
+     *
+     * @returns {string[]}
+     */
+    getEditableSkillRoots() {
+        const roots = [];
+
+        for (const repo of this.config.repositories) {
+            if (!repo.enabled || !repo.editable) continue;
+
+            let skillsPath = repo.skillsPath;
+
+            if (!skillsPath) {
+                const validation = this.validateRepository(repo.localPath);
+                if (validation.valid) {
+                    skillsPath = validation.skillsPath;
+                    repo.skillsPath = skillsPath;
+                }
+            }
+
+            if (skillsPath) {
+                const expandedPath = this.expandPath(skillsPath);
+                if (fs.existsSync(expandedPath)) {
+                    roots.push(expandedPath);
+                }
+            }
+        }
+
+        this.saveConfig();
+
+        return roots;
+    }
+
+    /**
+     * Check if a skill path belongs to a non-editable repository.
+     * Used by skill management operations to block modifications.
+     *
+     * @param {string} skillDir - The skill's directory path
+     * @returns {{isFromRepo: boolean, repoName: string|null, editable: boolean}}
+     */
+    getSkillRepoInfo(skillDir) {
+        if (!skillDir) {
+            return { isFromRepo: false, repoName: null, editable: true };
+        }
+
+        for (const repo of this.config.repositories) {
+            if (!repo.skillsPath) continue;
+
+            const expandedPath = this.expandPath(repo.skillsPath);
+            if (skillDir.startsWith(expandedPath)) {
+                return {
+                    isFromRepo: true,
+                    repoName: repo.name,
+                    editable: repo.editable || false,
+                };
+            }
+        }
+
+        // Not from any external repo - it's a local skill
+        return { isFromRepo: false, repoName: null, editable: true };
     }
 }
 

@@ -143,6 +143,9 @@ async function main() {
         logger,
     });
 
+    // Attach repoManager to agent so skills can access it for editability checks
+    agent.repoManager = repoManager;
+
     if (prompt) {
         // Single-shot mode: execute prompt and exit
         try {

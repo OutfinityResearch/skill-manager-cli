@@ -1,11 +1,26 @@
 /**
  * Update Section - Updates a specific section in a skill definition file
  * Automatically triggers code regeneration if a .generated.mjs file exists
+ *
+ * Only updates skills that are editable:
+ * - Local skills (in working directory's .AchillesSkills)
+ * - Skills from external repos marked as editable
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { updateSkillSection } from '../../schemas/skillSchemas.mjs';
+
+/**
+ * Check if a skill is editable (local or from editable repo).
+ */
+function isSkillEditable(skillDir, repoManager) {
+    if (!repoManager || !skillDir) {
+        return { editable: true, repoName: null };
+    }
+    const repoInfo = repoManager.getSkillRepoInfo(skillDir);
+    return { editable: repoInfo.editable, repoName: repoInfo.repoName };
+}
 
 /**
  * Check if a .generated.mjs file exists in the skill directory
@@ -69,6 +84,14 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     const filePath = skillInfo.filePath;
     const skillDir = skillInfo.record?.skillDir || path.dirname(filePath);
+
+    // Check if skill is editable
+    const repoManager = recursiveSkilledAgent?.repoManager;
+    const { editable, repoName } = isSkillEditable(skillDir, repoManager);
+
+    if (!editable) {
+        return `Error: Cannot update skill "${skillName}" - it belongs to read-only repository "${repoName}".\n\nTo enable editing, run: /edit-repo ${repoName}`;
+    }
 
     let currentContent;
     try {

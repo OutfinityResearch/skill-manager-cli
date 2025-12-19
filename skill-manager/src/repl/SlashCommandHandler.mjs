@@ -141,8 +141,8 @@ export class SlashCommandHandler {
         },
         'add-repo': {
             skill: null,
-            usage: '/add-repo <git-url|path> [name]',
-            description: 'Add an external skill repository',
+            usage: '/add-repo <git-url|path> [name] [--editable]',
+            description: 'Add an external skill repository (--editable allows managing its skills)',
             args: 'required',
             needsSkillArg: false,
         },
@@ -171,6 +171,13 @@ export class SlashCommandHandler {
             skill: null,
             usage: '/disable-repo <name>',
             description: 'Disable a repository (keeps config)',
+            args: 'required',
+            needsSkillArg: false,
+        },
+        'edit-repo': {
+            skill: null,
+            usage: '/edit-repo <name>',
+            description: 'Toggle whether a repo\'s skills can be listed/read/modified',
             args: 'required',
             needsSkillArg: false,
         },
@@ -402,34 +409,41 @@ export class SlashCommandHandler {
             if (repos.length === 0) {
                 return {
                     handled: true,
-                    result: 'No external repositories configured.\n\nUse /add-repo <git-url|path> to add one.',
+                    result: 'No external repositories configured.\n\nUse /add-repo <git-url|path> [--editable] to add one.',
                 };
             }
             const lines = ['## Configured Repositories\n'];
             for (const repo of repos) {
                 const status = repo.enabled ? '✓' : '✗';
                 const type = repo.type === 'git' ? '🔗' : '📁';
-                lines.push(`${status} ${type} **${repo.name}**`);
+                const editableLabel = repo.editable ? '(editable)' : '(read-only)';
+                lines.push(`${status} ${type} **${repo.name}** ${editableLabel}`);
                 lines.push(`   Source: ${repo.source}`);
                 lines.push(`   Path: ${repo.localPath}`);
-                lines.push(`   Status: ${repo.enabled ? 'enabled' : 'disabled'}`);
+                const statusParts = [repo.enabled ? 'enabled' : 'disabled'];
+                if (repo.editable) statusParts.push('editable');
+                lines.push(`   Status: ${statusParts.join(', ')}`);
                 lines.push('');
             }
+            lines.push('_Use /edit-repo <name> to toggle editability_');
             return { handled: true, result: lines.join('\n') };
         }
 
-        // Handle /add-repo <source> [name]
+        // Handle /add-repo <source> [name] [--editable] [--force]
         if (command === 'add-repo') {
             if (!repoManager) {
                 return { handled: true, error: 'Repository manager not available' };
             }
             const parts = args.split(/\s+/);
-            const source = parts[0];
-            const name = parts[1] || undefined;
+            // Filter out flags to get source and name
+            const nonFlagParts = parts.filter(p => !p.startsWith('-'));
+            const source = nonFlagParts[0];
+            const name = nonFlagParts[1] || undefined;
             const force = parts.includes('--force') || parts.includes('-f');
+            const editable = parts.includes('--editable') || parts.includes('-e');
 
             try {
-                const result = await repoManager.addRepository({ source, name, force });
+                const result = await repoManager.addRepository({ source, name, force, editable });
                 // Update agent's skill roots and reload
                 const agent = options.context?.skilledAgent;
                 this._syncAgentSkillRoots(agent, repoManager);
@@ -543,6 +557,30 @@ export class SlashCommandHandler {
                 return {
                     handled: true,
                     result: `✓ ${result.message}\n\nSkills have been reloaded.`,
+                };
+            } catch (error) {
+                return { handled: true, error: error.message };
+            }
+        }
+
+        // Handle /edit-repo <name> - toggle editable status
+        if (command === 'edit-repo') {
+            if (!repoManager) {
+                return { handled: true, error: 'Repository manager not available' };
+            }
+            try {
+                // Get current editable status and toggle it
+                const repos = repoManager.listRepositories();
+                const repo = repos.find(r => r.name === args);
+                if (!repo) {
+                    const available = repos.map(r => r.name).join(', ') || 'none';
+                    return { handled: true, error: `Repository "${args}" not found. Available: ${available}` };
+                }
+                const newEditable = !repo.editable;
+                const result = repoManager.setRepositoryEditable(args, newEditable);
+                return {
+                    handled: true,
+                    result: `✓ ${result.message}`,
                 };
             } catch (error) {
                 return { handled: true, error: error.message };
@@ -711,7 +749,7 @@ export class SlashCommandHandler {
                 }
 
                 // For repository commands that take repo names, suggest configured repos
-                if (['remove-repo', 'update-repo', 'enable-repo', 'disable-repo'].includes(command)) {
+                if (['remove-repo', 'update-repo', 'enable-repo', 'disable-repo', 'edit-repo'].includes(command)) {
                     const repos = this.getRepositories();
                     const matchingRepos = repos
                         .map(r => r.name)

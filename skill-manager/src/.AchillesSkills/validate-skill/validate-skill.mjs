@@ -1,10 +1,25 @@
 /**
  * Validate Skill - Validates a skill file against its schema
+ *
+ * Only validates skills that are editable:
+ * - Local skills (in working directory's .AchillesSkills)
+ * - Skills from external repos marked as editable
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { validateSkillContent } from '../../schemas/skillSchemas.mjs';
+
+/**
+ * Check if a skill is editable (local or from editable repo).
+ */
+function isSkillEditable(skillDir, repoManager) {
+    if (!repoManager || !skillDir) {
+        return { editable: true, repoName: null };
+    }
+    const repoInfo = repoManager.getSkillRepoInfo(skillDir);
+    return { editable: repoInfo.editable, repoName: repoInfo.repoName };
+}
 
 export async function action(recursiveSkilledAgent, prompt) {
     // Parse skill name
@@ -29,6 +44,15 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     if (!skillInfo) {
         return `Error: Skill "${skillName}" not found`;
+    }
+
+    // Check if skill is editable
+    const repoManager = recursiveSkilledAgent?.repoManager;
+    const skillDir = skillInfo.record?.skillDir || path.dirname(skillInfo.filePath);
+    const { editable, repoName } = isSkillEditable(skillDir, repoManager);
+
+    if (!editable) {
+        return `Error: Cannot validate skill "${skillName}" - it belongs to read-only repository "${repoName}".\n\nTo enable management, run: /edit-repo ${repoName}`;
     }
 
     let content;

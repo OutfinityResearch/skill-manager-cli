@@ -1,9 +1,24 @@
 /**
  * Write Specs - Creates or updates a skill's .specs.md specification file
+ *
+ * Only writes specs for skills that are editable:
+ * - Local skills (in working directory's .AchillesSkills)
+ * - Skills from external repos marked as editable
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+
+/**
+ * Check if a skill is editable (local or from editable repo).
+ */
+function isSkillEditable(skillDir, repoManager) {
+    if (!repoManager || !skillDir) {
+        return { editable: true, repoName: null };
+    }
+    const repoInfo = repoManager.getSkillRepoInfo(skillDir);
+    return { editable: repoInfo.editable, repoName: repoInfo.repoName };
+}
 
 /**
  * Generate a basic specs template for a skill
@@ -190,6 +205,14 @@ export async function action(recursiveSkilledAgent, prompt) {
     let skillDir;
     if (skillInfo) {
         skillDir = skillInfo.record?.skillDir || path.dirname(skillInfo.filePath);
+
+        // Check if skill is editable (only for existing skills from repos)
+        const repoManager = recursiveSkilledAgent?.repoManager;
+        const { editable, repoName } = isSkillEditable(skillDir, repoManager);
+
+        if (!editable) {
+            return `Error: Cannot write specs for skill "${skillName}" - it belongs to read-only repository "${repoName}".\n\nTo enable editing, run: /edit-repo ${repoName}`;
+        }
     } else {
         // Skill doesn't exist yet - create in skillsDir
         skillDir = path.join(skillsDir, skillName);

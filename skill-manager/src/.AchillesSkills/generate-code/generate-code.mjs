@@ -1,5 +1,9 @@
 /**
  * Generate Code - Generates .mjs code from skill definitions (tskill, iskill, oskill, cskill)
+ *
+ * Only generates code for skills that are editable:
+ * - Local skills (in working directory's .AchillesSkills)
+ * - Skills from external repos marked as editable
  */
 
 import fs from 'node:fs';
@@ -15,6 +19,17 @@ import { runTestFile } from '../../lib/testDiscovery.mjs';
 import { formatTestResult } from '../../ui/TestResultFormatter.mjs';
 
 const SUPPORTED_TYPES = ['tskill', 'iskill', 'oskill', 'cskill'];
+
+/**
+ * Check if a skill is editable (local or from editable repo).
+ */
+function isSkillEditable(skillDir, repoManager) {
+    if (!repoManager || !skillDir) {
+        return { editable: true, repoName: null };
+    }
+    const repoInfo = repoManager.getSkillRepoInfo(skillDir);
+    return { editable: repoInfo.editable, repoName: repoInfo.repoName };
+}
 
 /**
  * Check if regeneration is needed by comparing file modification times.
@@ -87,6 +102,14 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     const filePath = skillInfo.filePath;
     const skillDir = skillInfo.record?.skillDir || path.dirname(filePath);
+
+    // Check if skill is editable
+    const repoManager = recursiveSkilledAgent?.repoManager;
+    const { editable, repoName } = isSkillEditable(skillDir, repoManager);
+
+    if (!editable) {
+        return `Error: Cannot generate code for skill "${skillName}" - it belongs to read-only repository "${repoName}".\n\nTo enable editing, run: /edit-repo ${repoName}`;
+    }
 
     let content;
     try {
