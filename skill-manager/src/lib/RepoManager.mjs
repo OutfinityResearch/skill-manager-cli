@@ -11,6 +11,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
+import {
+    ConfigFileError,
+    RepositoryConfigurationError,
+    EnvironmentConfigurationError,
+    GitOperationError,
+    DirectoryNotFoundError,
+    RepositoryNotFoundError,
+    InputValidationError,
+} from './errors/index.mjs';
 
 const CONFIG_FILE_NAME = '.skill-manager.json';
 const CONFIG_VERSION = 1;
@@ -77,7 +86,9 @@ export class RepoManager {
             const content = JSON.stringify(this.config, null, 2);
             fs.writeFileSync(this.configPath, content, 'utf8');
         } catch (error) {
-            throw new Error(`Failed to save config: ${error.message}`);
+            throw new ConfigFileError(this.configPath, `Failed to save: ${error.message}`, {
+                cause: error,
+            });
         }
     }
 
@@ -145,7 +156,9 @@ export class RepoManager {
         try {
             await this._runCommand('git', ['--version']);
         } catch {
-            throw new Error('Git is required but not installed. Please install git and try again.');
+            throw new EnvironmentConfigurationError('git', 'Git is required but not installed', {
+                recoveryHint: 'Install git and try again',
+            });
         }
 
         const args = ['clone', '--depth', '1'];
@@ -158,7 +171,10 @@ export class RepoManager {
             await this._runCommand('git', args);
             return { success: true, message: `Cloned ${source} to ${targetDir}` };
         } catch (error) {
-            throw new Error(`Failed to clone repository: ${error.message}`);
+            throw new GitOperationError('clone', error.message, {
+                cause: error,
+                details: { source, targetDir, branch },
+            });
         }
     }
 
@@ -172,14 +188,19 @@ export class RepoManager {
         const expandedDir = this.expandPath(repoDir);
 
         if (!fs.existsSync(expandedDir)) {
-            throw new Error(`Repository directory not found: ${repoDir}`);
+            throw new DirectoryNotFoundError(repoDir, {
+                recoveryHint: 'Ensure the repository was cloned correctly or re-add it',
+            });
         }
 
         try {
             await this._runCommand('git', ['pull'], { cwd: expandedDir });
             return { success: true, message: `Updated ${repoDir}` };
         } catch (error) {
-            throw new Error(`Failed to update repository: ${error.message}`);
+            throw new GitOperationError('pull', error.message, {
+                cause: error,
+                details: { repoDir },
+            });
         }
     }
 
@@ -287,7 +308,7 @@ export class RepoManager {
      */
     async addRepository({ source, name, branch = 'main', force = false, editable = false }) {
         if (!source) {
-            throw new Error('Repository source is required');
+            throw new InputValidationError('source', 'Repository source is required');
         }
 
         const repoName = name || this.generateRepoName(source);
@@ -295,8 +316,10 @@ export class RepoManager {
         // Check for duplicate
         const existing = this.config.repositories.find((r) => r.name === repoName);
         if (existing && !force) {
-            throw new Error(
-                `Repository "${repoName}" already exists. Use a different name or --force to overwrite.`
+            throw new RepositoryConfigurationError(
+                repoName,
+                'Repository already exists. Use a different name or --force to overwrite.',
+                { details: { existingSource: existing.source } }
             );
         }
 
@@ -320,7 +343,9 @@ export class RepoManager {
             localPath = path.resolve(source);
 
             if (!fs.existsSync(localPath)) {
-                throw new Error(`Local path does not exist: ${source}`);
+                throw new DirectoryNotFoundError(source, {
+                    recoveryHint: 'Verify the path is correct and accessible',
+                });
             }
         }
 
@@ -334,8 +359,13 @@ export class RepoManager {
                     fs.rmSync(expandedPath, { recursive: true, force: true });
                 }
             }
-            throw new Error(
-                `No skills found in repository. Expected .AchillesSkills directory in ${source}`
+            throw new RepositoryConfigurationError(
+                repoName,
+                'No skills found. Expected .AchillesSkills directory.',
+                {
+                    details: { source, localPath },
+                    recoveryHint: 'Ensure the repository contains a .AchillesSkills directory with skill definitions',
+                }
             );
         }
 
@@ -378,7 +408,8 @@ export class RepoManager {
     removeRepository(name, deleteFiles = false) {
         const repo = this.config.repositories.find((r) => r.name === name);
         if (!repo) {
-            throw new Error(`Repository "${name}" not found`);
+            const availableRepos = this.config.repositories.map((r) => r.name);
+            throw new RepositoryNotFoundError(name, availableRepos);
         }
 
         // Optionally delete cloned files
@@ -431,7 +462,8 @@ export class RepoManager {
 
         const repo = this.config.repositories.find((r) => r.name === name);
         if (!repo) {
-            throw new Error(`Repository "${name}" not found`);
+            const availableRepos = this.config.repositories.map((r) => r.name);
+            throw new RepositoryNotFoundError(name, availableRepos);
         }
 
         if (repo.type !== 'git') {
@@ -452,7 +484,8 @@ export class RepoManager {
     setRepositoryEnabled(name, enabled) {
         const repo = this.config.repositories.find((r) => r.name === name);
         if (!repo) {
-            throw new Error(`Repository "${name}" not found`);
+            const availableRepos = this.config.repositories.map((r) => r.name);
+            throw new RepositoryNotFoundError(name, availableRepos);
         }
 
         repo.enabled = enabled;
@@ -476,7 +509,8 @@ export class RepoManager {
     setRepositoryEditable(name, editable) {
         const repo = this.config.repositories.find((r) => r.name === name);
         if (!repo) {
-            throw new Error(`Repository "${name}" not found`);
+            const availableRepos = this.config.repositories.map((r) => r.name);
+            throw new RepositoryNotFoundError(name, availableRepos);
         }
 
         repo.editable = editable;

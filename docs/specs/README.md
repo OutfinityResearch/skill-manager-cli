@@ -30,6 +30,7 @@ This folder contains detailed design specifications for each module in the skill
 | [ui/CommandSelector.mjs.md](./ui/CommandSelector.mjs.md) | Interactive pickers for commands/skills/tests |
 | [ui/LineEditor.mjs.md](./ui/LineEditor.mjs.md) | Line editing with cursor navigation |
 | [ui/spinner.mjs.md](./ui/spinner.mjs.md) | Animated progress indicators |
+| [ui/UIContext.mjs.md](./ui/UIContext.mjs.md) | Global UI provider context singleton |
 | [ui/ResultFormatter.mjs.md](./ui/ResultFormatter.mjs.md) | Skill result formatting |
 | [ui/MarkdownRenderer.mjs.md](./ui/MarkdownRenderer.mjs.md) | Terminal markdown rendering |
 | [ui/HelpPrinter.mjs.md](./ui/HelpPrinter.mjs.md) | Help screens and history display |
@@ -43,6 +44,8 @@ This folder contains detailed design specifications for each module in the skill
 ### Library Layer
 | File | Description |
 |------|-------------|
+| [lib/constants.mjs.md](./lib/constants.mjs.md) | Centralized constants registry |
+| [lib/RepoManager.mjs.md](./lib/RepoManager.mjs.md) | External skill repository management |
 | [lib/testDiscovery.mjs.md](./lib/testDiscovery.mjs.md) | Test discovery and execution |
 
 ## Document Format

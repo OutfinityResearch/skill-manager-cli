@@ -6,6 +6,7 @@
 
 import { formatSlashResult } from '../ui/ResultFormatter.mjs';
 import { showHelp, getQuickReference } from '../ui/HelpSystem.mjs';
+import { BUILT_IN_SKILLS } from '../lib/constants.mjs';
 
 /**
  * SlashCommandHandler class for managing slash commands in the CLI.
@@ -17,56 +18,56 @@ export class SlashCommandHandler {
      */
     static COMMANDS = {
         'ls': {
-            skill: 'list-skills',
+            skill: BUILT_IN_SKILLS.LIST,
             usage: '/ls [all] [--repo <name>]',
             description: 'List skills (all=include built-in, --repo=filter by repo)',
             args: 'optional',
             needsSkillArg: false,
         },
         'list': {
-            skill: 'list-skills',
+            skill: BUILT_IN_SKILLS.LIST,
             usage: '/list [all] [--repo <name>]',
             description: 'List skills (all=include built-in, --repo=filter by repo)',
             args: 'optional',
             needsSkillArg: false,
         },
         'read': {
-            skill: 'read-skill',
+            skill: BUILT_IN_SKILLS.READ,
             usage: '/read <skill-name>',
             description: 'Read a skill definition file',
             args: 'required',
             needsSkillArg: true,
         },
         'write': {
-            skill: 'write-skill',
+            skill: BUILT_IN_SKILLS.WRITE,
             usage: '/write <skill-name> [type]',
             description: 'Create or update a skill file',
             args: 'required',
             needsSkillArg: true,
         },
         'delete': {
-            skill: 'delete-skill',
+            skill: BUILT_IN_SKILLS.DELETE,
             usage: '/delete <skill-name>',
             description: 'Delete a skill directory',
             args: 'required',
             needsSkillArg: true,
         },
         'validate': {
-            skill: 'validate-skill',
+            skill: BUILT_IN_SKILLS.VALIDATE,
             usage: '/validate <skill-name>',
             description: 'Validate skill against schema',
             args: 'required',
             needsSkillArg: true,
         },
         'template': {
-            skill: 'get-template',
+            skill: BUILT_IN_SKILLS.GET_TEMPLATE,
             usage: '/template <type>',
             description: 'Get blank template (tskill, cskill, cgskill, etc.)',
             args: 'required',
             needsSkillArg: false, // Takes type, not skill name
         },
         'generate': {
-            skill: 'generate-code',
+            skill: BUILT_IN_SKILLS.GENERATE_CODE,
             usage: '/generate <skill-name>',
             description: 'Generate .mjs code from tskill',
             args: 'required',
@@ -80,21 +81,21 @@ export class SlashCommandHandler {
             needsSkillArg: false,
         },
         'run-tests': {
-            skill: 'run-tests',
+            skill: BUILT_IN_SKILLS.RUN_TESTS,
             usage: '/run-tests [skill-name|all]',
             description: 'Run .tests.mjs files (all = run all tests)',
             args: 'optional',
             needsSkillArg: false,
         },
         'refine': {
-            skill: 'skill-refiner',
+            skill: BUILT_IN_SKILLS.SKILL_REFINER,
             usage: '/refine <skill-name>',
             description: 'Iteratively improve skill until tests pass',
             args: 'required',
             needsSkillArg: true,
         },
         'update': {
-            skill: 'update-section',
+            skill: BUILT_IN_SKILLS.UPDATE_SECTION,
             usage: '/update <skill-name> <section>',
             description: 'Update a specific section of a skill',
             args: 'required',
@@ -111,23 +112,30 @@ export class SlashCommandHandler {
             needsSkillArg: true,
         },
         'specs': {
-            skill: 'read-specs',
+            skill: BUILT_IN_SKILLS.READ_SPECS,
             usage: '/specs <skill-name>',
             description: 'Read a skill\'s .specs.md file',
             args: 'required',
             needsSkillArg: true,
         },
         'specs-write': {
-            skill: 'write-specs',
+            skill: BUILT_IN_SKILLS.WRITE_SPECS,
             usage: '/specs-write <skill-name> [content]',
             description: 'Create/update a skill\'s .specs.md file',
             args: 'required',
             needsSkillArg: true,
         },
         'write-tests': {
-            skill: 'write-tests',
+            skill: BUILT_IN_SKILLS.WRITE_TESTS,
             usage: '/write-tests <skill-name>',
             description: 'Generate test file for a skill',
+            args: 'required',
+            needsSkillArg: true,
+        },
+        'gen-tests': {
+            skill: BUILT_IN_SKILLS.GENERATE_TESTS,
+            usage: '/gen-tests <skill-name>',
+            description: 'Generate tests from cskill specs (spec-driven)',
             args: 'required',
             needsSkillArg: true,
         },
@@ -343,7 +351,7 @@ export class SlashCommandHandler {
 
             // Args provided - run test-code for the specified skill
             try {
-                const result = await this.executeSkill('test-code', args, options);
+                const result = await this.executeSkill(BUILT_IN_SKILLS.TEST_CODE, args, options);
                 return {
                     handled: true,
                     result: formatSlashResult(result),
@@ -388,7 +396,7 @@ export class SlashCommandHandler {
 
             // Args provided - run tests for the specified skill or "all"
             try {
-                const result = await this.executeSkill('run-tests', args, options);
+                const result = await this.executeSkill(BUILT_IN_SKILLS.RUN_TESTS, args, options);
                 return {
                     handled: true,
                     result: formatSlashResult(result),
@@ -713,7 +721,7 @@ export class SlashCommandHandler {
                 const argPrefix = args.toLowerCase();
 
                 // For commands that take skill names, suggest user skills
-                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'specs', 'specs-write', 'write-tests'].includes(command)) {
+                if (['read', 'delete', 'validate', 'generate', 'test', 'refine', 'update', 'specs', 'specs-write', 'write-tests', 'gen-tests'].includes(command)) {
                     const skills = this.getUserSkills();
                     const matchingSkills = skills
                         .map(s => s.shortName || s.name)

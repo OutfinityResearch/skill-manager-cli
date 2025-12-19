@@ -16,6 +16,7 @@ import { printHelp as printREPLHelp, showHistory, searchHistory } from './ui/Hel
 import { RepoManager } from './lib/RepoManager.mjs';
 import { UIContext } from './ui/UIContext.mjs';
 import { createProvider, getProviderNames } from './ui/providers/index.mjs';
+import { BUILT_IN_SKILLS } from './lib/constants.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,6 +52,7 @@ export {
     searchHistory,
     // Constants
     builtInSkillsDir,
+    BUILT_IN_SKILLS,
 };
 
 // CLI entry point when run directly
@@ -192,7 +194,7 @@ async function main() {
             };
 
             let result = await agent.executePrompt(prompt, {
-                skillName: 'skills-orchestrator',
+                skillName: BUILT_IN_SKILLS.ORCHESTRATOR,
                 context,
                 mode,
             });

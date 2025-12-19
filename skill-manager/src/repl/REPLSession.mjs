@@ -19,6 +19,7 @@ import { discoverSkillTests, runTestFile, runTestSuite } from '../lib/testDiscov
 import { formatTestResult, formatSuiteResults } from '../ui/TestResultFormatter.mjs';
 import { showHelp, getHelpTopics, getCommandHelp } from '../ui/HelpSystem.mjs';
 import { UIContext } from '../ui/UIContext.mjs';
+import { BUILT_IN_SKILLS } from '../lib/constants.mjs';
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -137,7 +138,7 @@ export class REPLSession {
      * Process a prompt through the skills-orchestrator
      */
     async processPrompt(userPrompt, opts = {}) {
-        const { skillName = 'skills-orchestrator', ...restOptions } = opts;
+        const { skillName = BUILT_IN_SKILLS.ORCHESTRATOR, ...restOptions } = opts;
 
         let result = await this.agent.executePrompt(userPrompt, {
             skillName,
