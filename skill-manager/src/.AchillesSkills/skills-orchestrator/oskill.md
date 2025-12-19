@@ -143,6 +143,29 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 }
 ```
 
+**Direct Skill Invocation (External/User Skills):**
+You can also invoke any registered skill directly by its name. This includes skills from external repositories added via /add-repo.
+
+**Example - User says "reverse hello" (and shared-utility skill is available):**
+```json
+{
+  "plan": [
+    {"skill": "shared-utility", "input": "reverse hello", "reason": "Use shared-utility to reverse text"}
+  ]
+}
+```
+
+**Example - User says "greet Alice" (and my-local-skill is available):**
+```json
+{
+  "plan": [
+    {"skill": "my-local-skill", "input": "greet Alice", "reason": "Use greeting skill"}
+  ]
+}
+```
+
+When the user's request matches a capability of a registered skill (not a skill management operation), invoke that skill directly.
+
 **Workflow for Updating a Skill:**
 1. Use read-skill to see the current definition
 2. Identify which section needs changes (Summary, Prompt, Instructions, etc.)
@@ -170,6 +193,7 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 - execute-skill
 - read-specs
 - write-specs
+- *
 
 ## Intents
 - list: Show available skills in the catalog
@@ -186,6 +210,7 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 - execute: Run a user skill with optional input
 - read-specs: View the .specs.md file for a skill
 - write-specs: Create or update a skill's .specs.md file
+- use-skill: Invoke an external/user skill directly by name to perform a task
 
 ## Fallback-Text
 When the user's intent is unclear:
