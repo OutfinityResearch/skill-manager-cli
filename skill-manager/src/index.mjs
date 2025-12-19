@@ -14,12 +14,17 @@ import { REPLSession } from './repl/REPLSession.mjs';
 import { summarizeResult, formatSlashResult } from './ui/ResultFormatter.mjs';
 import { printHelp as printREPLHelp, showHistory, searchHistory } from './ui/HelpPrinter.mjs';
 import { RepoManager } from './lib/RepoManager.mjs';
+import { UIContext } from './ui/UIContext.mjs';
+import { createProvider, getProviderNames } from './ui/providers/index.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Path to built-in skills bundled with this module
 const builtInSkillsDir = path.join(__dirname, '.AchillesSkills');
+
+// Path to bash command skills (bundled with this repo)
+const bashSkillsDir = path.join(__dirname, '../../bash-skills/.AchillesSkills');
 
 // Re-export classes and functions for library usage
 export {
@@ -59,6 +64,7 @@ async function main() {
     let debug = false;
     let mode = 'deep';
     let renderMarkdown = true;
+    let uiStyle = process.env.SKILL_MANAGER_UI || 'claude-code'; // Default UI style
     const cliSkillRoots = []; // Skill roots from --skill-root flags
 
     for (let i = 0; i < args.length; i++) {
@@ -90,6 +96,15 @@ async function main() {
             mode = 'deep';
         } else if (arg === '--no-markdown' || arg === '--raw') {
             renderMarkdown = false;
+        } else if (arg === '--ui-minimal') {
+            uiStyle = 'minimal';
+        } else if (arg === '--ui-claude-code') {
+            uiStyle = 'claude-code';
+        } else if (arg === '--ui' || arg === '--ui-style') {
+            uiStyle = args[i + 1] || 'claude-code';
+            i += 1;
+        } else if (arg.startsWith('--ui=') || arg.startsWith('--ui-style=')) {
+            uiStyle = arg.split('=')[1] || 'claude-code';
         } else if (arg === '--version') {
             console.log('skill-manager v3.0.0');
             process.exit(0);
@@ -119,9 +134,11 @@ async function main() {
     const repoManager = new RepoManager({ workingDir, globalReposDir, logger });
     const configSkillRoots = repoManager.getEnabledSkillRoots();
 
-    // Merge all skill roots: built-in + CLI flags + config file repos
+    // Merge all skill roots: built-in + bash-skills + CLI flags + config file repos
     const allSkillRoots = [
         builtInSkillsDir,
+        // Add bash-skills if the directory exists
+        ...(fs.existsSync(bashSkillsDir) ? [bashSkillsDir] : []),
         ...cliSkillRoots,
         ...configSkillRoots,
     ];
@@ -145,6 +162,18 @@ async function main() {
 
     // Attach repoManager to agent so skills can access it for editability checks
     agent.repoManager = repoManager;
+
+    // Initialize UI provider based on selected style
+    try {
+        const uiProvider = createProvider(uiStyle);
+        UIContext.setProvider(uiProvider);
+        if (verbose) {
+            logger.log(`UI style: ${uiStyle}`);
+        }
+    } catch (error) {
+        console.error(`Error: Invalid UI style '${uiStyle}'. Available: ${getProviderNames().join(', ')}`);
+        process.exit(1);
+    }
 
     if (prompt) {
         // Single-shot mode: execute prompt and exit
@@ -233,6 +262,9 @@ OPTIONS:
   --fast                 Use fast LLM mode (cheaper, quicker)
   --deep                 Use deep LLM mode (default, more capable)
   --no-markdown          Disable markdown rendering in output (use /raw to toggle)
+  --ui <style>           UI style: claude-code (default), minimal
+  --ui-minimal           Use minimal UI (no colors, simple prompts)
+  --ui-claude-code       Use Claude Code style UI (boxed input, animations)
   -h, --help             Show this help message
   --version              Show version
 
@@ -296,6 +328,7 @@ EXAMPLES:
 ENVIRONMENT:
   ANTHROPIC_API_KEY    API key for Claude (required)
   OPENAI_API_KEY       Alternative: API key for OpenAI
+  SKILL_MANAGER_UI     Default UI style (claude-code, minimal)
 
 For more information, see the README.md in the SkillManagerAgent directory.
 `);

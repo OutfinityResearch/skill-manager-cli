@@ -11,11 +11,14 @@
  * - Ctrl+K to kill to end of line
  * - Ctrl+Insert or Ctrl+Shift+C to copy line to clipboard
  * - Shift+Insert or Ctrl+Shift+V to paste from clipboard
+ *
+ * @module ui/LineEditor
  */
 
 import { copyToClipboard, pasteFromClipboard } from '../lib/clipboard.mjs';
+import { baseTheme } from './themes/base.mjs';
 
-// ANSI escape codes for terminal control
+// ANSI escape codes for terminal control (not theme-dependent)
 const ANSI = {
     MOVE_TO_COL: (n) => `\x1b[${n}G`,
     CLEAR_TO_END: '\x1b[K',
@@ -73,13 +76,24 @@ export class LineEditor {
     /**
      * @param {Object} options
      * @param {string} [options.prompt=''] - The prompt string displayed before input
+     * @param {string} [options.rightHint=''] - Hint displayed on the right side
+     * @param {boolean} [options.boxed=false] - Whether to draw a box around the input
      * @param {NodeJS.WriteStream} [options.stream=process.stdout] - Output stream
+     * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
      */
     constructor(options = {}) {
+        // Use provided theme or fall back to baseTheme
+        this.theme = options.theme || baseTheme;
+        this.colors = this.theme.colors;
+        this.box = this.theme.box;
+
         this.buffer = '';
         this.cursorPos = 0;
         this.prompt = options.prompt || '';
+        this.rightHint = options.rightHint || '';
+        this.boxed = options.boxed || false;
         this.stream = options.stream || process.stdout;
+        this.boxDrawn = false; // Track if box has been drawn
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -362,13 +376,126 @@ export class LineEditor {
      * Render the line with proper cursor positioning
      */
     render() {
-        // Move to start of line, clear to end, write prompt + buffer
+        if (this.boxed) {
+            this._renderBoxed();
+        } else {
+            this._renderSimple();
+        }
+    }
+
+    /**
+     * Simple render without box
+     */
+    _renderSimple() {
+        // Move to start of line, clear to end
         this.stream.write('\r' + ANSI.CLEAR_TO_END);
+
+        // Write prompt + buffer
         this.stream.write(this.prompt + this.buffer);
 
-        // Position cursor correctly (1-indexed column)
-        const cursorColumn = this.prompt.length + this.cursorPos + 1;
+        // If there's a right hint, display it
+        if (this.rightHint) {
+            const cols = process.stdout.columns || 80;
+            const visiblePromptLen = this.prompt.replace(/\x1b\[[0-9;]*m/g, '').length;
+            const contentLen = visiblePromptLen + this.buffer.length;
+            const hintLen = this.rightHint.replace(/\x1b\[[0-9;]*m/g, '').length;
+
+            if (contentLen + hintLen + 2 < cols) {
+                this.stream.write(ANSI.MOVE_TO_COL(cols - hintLen));
+                this.stream.write(this.rightHint);
+            }
+        }
+
+        const visiblePromptLen = this.prompt.replace(/\x1b\[[0-9;]*m/g, '').length;
+        const cursorColumn = visiblePromptLen + this.cursorPos + 1;
         this.stream.write(ANSI.MOVE_TO_COL(cursorColumn));
+    }
+
+    /**
+     * Render with a box around the input
+     */
+    _renderBoxed() {
+        const cols = process.stdout.columns || 80;
+        const { gray, reset } = this.colors;
+        const { topLeft, topRight, bottomLeft, bottomRight, horizontal, vertical } = this.box;
+
+        // Calculate visible lengths (strip ANSI codes)
+        const visiblePromptLen = this.prompt.replace(/\x1b\[[0-9;]*m/g, '').length;
+        const hintLen = this.rightHint.replace(/\x1b\[[0-9;]*m/g, '').length;
+
+        // Layout for middle line: │ {prompt}{content}{hint} │
+        // = 1 (│) + 1 (space) + prompt + content + hint + 1 (space) + 1 (│)
+        // = 4 + prompt + content + hint = cols
+        const contentAreaWidth = cols - 4 - visiblePromptLen - hintLen;
+        // Horizontal line width (between corners) = cols - 2
+        const horizontalWidth = cols - 2;
+        const horizontalLine = horizontal.repeat(horizontalWidth);
+
+        // Truncate buffer if too long
+        let displayBuffer = this.buffer;
+        let bufferOffset = 0;
+        if (this.buffer.length > contentAreaWidth) {
+            const start = Math.max(0, this.cursorPos - Math.floor(contentAreaWidth / 2));
+            bufferOffset = start;
+            displayBuffer = this.buffer.slice(start, start + contentAreaWidth);
+        }
+
+        // Build padded content - content fills remaining space before hint
+        const paddedBuffer = displayBuffer.padEnd(contentAreaWidth);
+
+        if (!this.boxDrawn) {
+            // First render: draw complete box (3 lines)
+            this.stream.write(`\n${gray}${topLeft}${horizontalLine}${topRight}${reset}\n`);
+            this.stream.write(`${gray}${vertical}${reset} `);
+            this.stream.write(this.prompt);
+            this.stream.write(paddedBuffer);
+            this.stream.write(this.rightHint);
+            this.stream.write(` ${gray}${vertical}${reset}\n`);
+            this.stream.write(`${gray}${bottomLeft}${horizontalLine}${bottomRight}${reset}`);
+            // Move cursor back up to content line
+            this.stream.write('\x1b[1A'); // Move up from bottom to content line
+            this.boxDrawn = true;
+        } else {
+            // Subsequent renders: cursor is on content line, just redraw it
+            this.stream.write('\r' + ANSI.CLEAR_TO_END);
+            this.stream.write(`${gray}${vertical}${reset} `);
+            this.stream.write(this.prompt);
+            this.stream.write(paddedBuffer);
+            this.stream.write(this.rightHint);
+            this.stream.write(` ${gray}${vertical}${reset}`);
+        }
+
+        // Position cursor within the content line
+        const cursorInBuffer = this.cursorPos - bufferOffset;
+        const cursorColumn = 2 + visiblePromptLen + cursorInBuffer + 1;
+        this.stream.write(ANSI.MOVE_TO_COL(cursorColumn));
+    }
+
+    /**
+     * Finalize the box display (move cursor below the box when input is complete)
+     */
+    drawBottomBorder() {
+        if (this.boxed && this.boxDrawn) {
+            // Box is already complete with bottom border
+            // Just move cursor down to below the box
+            this.stream.write('\x1b[1B'); // Move down to bottom border line
+            this.stream.write('\r');      // Go to start of line
+            this.boxDrawn = false;
+        }
+    }
+
+    /**
+     * Clear the box display (move cursor up and clear lines)
+     */
+    clearBox() {
+        if (this.boxed && this.boxDrawn) {
+            // Cursor is on content line, need to clear all 3 lines
+            // First move down to bottom border, then clear going up
+            this.stream.write('\x1b[1B\r' + ANSI.CLEAR_TO_END); // Clear bottom border
+            this.stream.write('\x1b[1A\r' + ANSI.CLEAR_TO_END); // Clear content line
+            this.stream.write('\x1b[1A\r' + ANSI.CLEAR_TO_END); // Clear top border
+            this.boxDrawn = false;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

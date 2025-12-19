@@ -1,21 +1,16 @@
 import readline from 'node:readline';
+import { baseTheme, terminal } from './themes/base.mjs';
 
 /**
- * ANSI escape codes for terminal control
+ * Terminal control sequences (not theme-dependent)
  */
-const ANSI = {
-    HIDE_CURSOR: '\x1b[?25l',
-    SHOW_CURSOR: '\x1b[?25h',
-    CLEAR_LINE: '\x1b[K',
-    MOVE_UP: '\x1b[A',
-    MOVE_DOWN: '\x1b[B',
-    MOVE_TO_COL: (n) => `\x1b[${n}G`,
-    DIM: '\x1b[2m',
-    RESET: '\x1b[0m',
-    CYAN: '\x1b[36m',
-    YELLOW: '\x1b[33m',
-    GREEN: '\x1b[32m',
-    INVERSE: '\x1b[7m',
+const TERMINAL = {
+    HIDE_CURSOR: terminal.hideCursor,
+    SHOW_CURSOR: terminal.showCursor,
+    CLEAR_LINE: terminal.clearLine,
+    MOVE_UP: terminal.moveUp,
+    MOVE_DOWN: terminal.moveDown,
+    MOVE_TO_COL: terminal.moveToCol,
 };
 
 /**
@@ -25,7 +20,17 @@ const ANSI = {
  * navigate with arrow keys and select with Enter.
  */
 export class CommandSelector {
+    /**
+     * @param {Array} commands - Array of {name, description, usage}
+     * @param {Object} options - Configuration options
+     * @param {number} [options.maxVisible=8] - Maximum visible items
+     * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
+     */
     constructor(commands, options = {}) {
+        // Use provided theme or fall back to baseTheme
+        this.theme = options.theme || baseTheme;
+        this.colors = this.theme.colors;
+
         this.commands = commands; // Array of {name, description, usage}
         this.maxVisible = options.maxVisible || 8;
         this.selectedIndex = 0;
@@ -79,9 +84,10 @@ export class CommandSelector {
     }
 
     /**
-     * Render the command list to a string array
+     * Render the command list to a string array (Claude Code style)
      */
     render() {
+        const { gray, reset, cyan, magenta } = this.colors;
         const lines = [];
         const visible = this.filteredCommands.slice(
             this.scrollOffset,
@@ -90,30 +96,33 @@ export class CommandSelector {
 
         // Show scroll indicator if needed
         if (this.scrollOffset > 0) {
-            lines.push(`${ANSI.DIM}  ↑ ${this.scrollOffset} more above${ANSI.RESET}`);
+            lines.push(`${gray}  ↑ ${this.scrollOffset} more${reset}`);
         }
 
         visible.forEach((cmd, idx) => {
             const actualIdx = this.scrollOffset + idx;
             const isSelected = actualIdx === this.selectedIndex;
-            const prefix = isSelected ? `${ANSI.CYAN}❯${ANSI.RESET}` : ' ';
-            const name = isSelected
-                ? `${ANSI.CYAN}${cmd.name}${ANSI.RESET}`
-                : cmd.name;
-            const desc = `${ANSI.DIM}${cmd.description}${ANSI.RESET}`;
 
-            lines.push(`${prefix} ${name.padEnd(20)} ${desc}`);
+            // Claude Code style: selected item has ❯ prefix and cyan highlight
+            const prefix = isSelected ? `${magenta}❯${reset}` : ' ';
+            const name = isSelected
+                ? `${cyan}${cmd.name}${reset}`
+                : `${reset}${cmd.name}`;
+            const desc = `${gray}${cmd.description}${reset}`;
+
+            // Two-column layout: command name (16 chars) + description
+            lines.push(` ${prefix} ${name.padEnd(16)}${desc}`);
         });
 
         // Show scroll indicator if more below
         const remaining = this.filteredCommands.length - this.scrollOffset - this.maxVisible;
         if (remaining > 0) {
-            lines.push(`${ANSI.DIM}  ↓ ${remaining} more below${ANSI.RESET}`);
+            lines.push(`${gray}  ↓ ${remaining} more${reset}`);
         }
 
         // Show empty state
         if (this.filteredCommands.length === 0) {
-            lines.push(`${ANSI.DIM}  No matching commands${ANSI.RESET}`);
+            lines.push(`${gray}  No matching commands${reset}`);
         }
 
         return lines;
@@ -133,72 +142,84 @@ export class CommandSelector {
 
 /**
  * Show an interactive command selector and return the selected command
+ * Styled to match Claude Code's command picker
  *
  * @param {Array} commands - Array of {name, description, usage}
  * @param {Object} options - Options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
  * @returns {Promise<{name: string, args: string}|null>} - Selected command or null if cancelled
  */
 export async function showCommandSelector(commands, options = {}) {
+    const theme = options.theme || baseTheme;
+    const colors = theme.colors;
     const {
-        prompt = 'SkillManager> /',
+        prompt = `${colors.cyan}${colors.bold}>${colors.reset} /`,
         initialFilter = '',
-        maxVisible = 8,
+        maxVisible = 10,
     } = options;
 
+    // Calculate visible prompt length for cursor positioning
+    const visiblePromptLen = 4; // "> /" = 4 chars
+
     return new Promise((resolve) => {
-        const selector = new CommandSelector(commands, { ...options, maxVisible });
+        const selector = new CommandSelector(commands, { ...options, maxVisible, theme });
         selector.updateFilter(initialFilter);
 
         let currentInput = initialFilter;
         let maxRenderedLines = 0; // Track max lines ever rendered for proper clearing
 
         // Hide cursor during selection
-        process.stdout.write(ANSI.HIDE_CURSOR);
+        process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
             if (maxRenderedLines === 0) return;
 
             // We're at the prompt line - move down to clear all previously rendered content
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
             }
             // Move back up to prompt line
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
             // Clear prompt line
-            process.stdout.write(`\r${ANSI.CLEAR_LINE}`);
+            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
         };
 
         const render = () => {
             // Clear all previously rendered content
             clearDisplay();
 
-            // Render prompt with current filter
+            // Render prompt with current filter (Claude Code style: "> /filter")
             process.stdout.write(`${prompt}${currentInput}`);
+
+            // Horizontal separator line
+            const cols = process.stdout.columns || 80;
+            process.stdout.write(`\n${colors.gray}${'─'.repeat(cols)}${colors.reset}`);
 
             // Render command list below
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}${line}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
             });
 
-            // Track max lines for future clearing
-            if (lines.length > maxRenderedLines) {
-                maxRenderedLines = lines.length;
+            // Track max lines for future clearing (include separator line)
+            const totalLines = 1 + lines.length; // 1 for separator
+            if (totalLines > maxRenderedLines) {
+                maxRenderedLines = totalLines;
             }
 
             // Move cursor back to input line
-            for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+            for (let i = 0; i < totalLines; i++) {
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
             // Position cursor at end of input
-            process.stdout.write(`\r${ANSI.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(visiblePromptLen + currentInput.length + 1)}`);
         };
 
         const cleanup = () => {
             clearDisplay();
-            process.stdout.write(ANSI.SHOW_CURSOR);
+            process.stdout.write(TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -226,7 +247,7 @@ export async function showCommandSelector(commands, options = {}) {
                 const selected = selector.getSelected();
                 cleanup();
                 if (selected) {
-                    resolve({ name: selected.name, args: '', needsSkillArg: selected.needsSkillArg });
+                    resolve({ name: selected.name, args: '', needsSkillArg: selected.needsSkillArg, needsRepoArg: selected.needsRepoArg });
                 } else {
                     resolve(null);
                 }
@@ -259,7 +280,7 @@ export async function showCommandSelector(commands, options = {}) {
                 const selected = selector.getSelected();
                 if (selected) {
                     cleanup();
-                    resolve({ name: selected.name, args: '', needsSkillArg: selected.needsSkillArg });
+                    resolve({ name: selected.name, args: '', needsSkillArg: selected.needsSkillArg, needsRepoArg: selected.needsRepoArg });
                 }
                 return;
             }
@@ -298,6 +319,7 @@ export function buildCommandList(slashCommands) {
                 usage: def.usage,
                 skill: def.skill,
                 needsSkillArg: def.needsSkillArg || false,
+                needsRepoArg: def.needsRepoArg || false,
             });
             if (def.skill) seen.add(def.skill);
         }
@@ -323,9 +345,11 @@ export function buildCommandList(slashCommands) {
  *
  * @param {Array} skills - Array of {name, type, description}
  * @param {Object} options - Options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
  * @returns {Promise<{name: string}|null>} - Selected skill or null if cancelled
  */
 export async function showSkillSelector(skills, options = {}) {
+    const theme = options.theme || baseTheme;
     const {
         prompt = 'Select skill> ',
         initialFilter = '',
@@ -344,24 +368,24 @@ export async function showSkillSelector(skills, options = {}) {
     }
 
     return new Promise((resolve) => {
-        const selector = new CommandSelector(skillItems, { maxVisible });
+        const selector = new CommandSelector(skillItems, { maxVisible, theme });
         selector.updateFilter(initialFilter);
 
         let currentInput = initialFilter;
         let maxRenderedLines = 0;
 
-        process.stdout.write(ANSI.HIDE_CURSOR);
+        process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
             if (maxRenderedLines === 0) return;
 
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
             }
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
-            process.stdout.write(`\r${ANSI.CLEAR_LINE}`);
+            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
         };
 
         const render = () => {
@@ -371,7 +395,7 @@ export async function showSkillSelector(skills, options = {}) {
 
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}${line}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
             });
 
             if (lines.length > maxRenderedLines) {
@@ -379,14 +403,14 @@ export async function showSkillSelector(skills, options = {}) {
             }
 
             for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
-            process.stdout.write(`\r${ANSI.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
         };
 
         const cleanup = () => {
             clearDisplay();
-            process.stdout.write(ANSI.SHOW_CURSOR);
+            process.stdout.write(TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -464,9 +488,11 @@ export async function showSkillSelector(skills, options = {}) {
  *
  * @param {Array} tests - Array of test info objects from discoverSkillTests
  * @param {Object} options - Options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
  * @returns {Promise<{skillName: string, testFile: string}|null>} - Selected test or null if cancelled
  */
 export async function showTestSelector(tests, options = {}) {
+    const theme = options.theme || baseTheme;
     const {
         prompt = 'Select test> ',
         initialFilter = '',
@@ -485,24 +511,24 @@ export async function showTestSelector(tests, options = {}) {
     }));
 
     return new Promise((resolve) => {
-        const selector = new CommandSelector(testItems, { maxVisible });
+        const selector = new CommandSelector(testItems, { maxVisible, theme });
         selector.updateFilter(initialFilter);
 
         let currentInput = initialFilter;
         let maxRenderedLines = 0;
 
-        process.stdout.write(ANSI.HIDE_CURSOR);
+        process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
             if (maxRenderedLines === 0) return;
 
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
             }
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
-            process.stdout.write(`\r${ANSI.CLEAR_LINE}`);
+            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
         };
 
         const render = () => {
@@ -512,7 +538,7 @@ export async function showTestSelector(tests, options = {}) {
 
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}${line}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
             });
 
             if (lines.length > maxRenderedLines) {
@@ -520,14 +546,14 @@ export async function showTestSelector(tests, options = {}) {
             }
 
             for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
-            process.stdout.write(`\r${ANSI.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
         };
 
         const cleanup = () => {
             clearDisplay();
-            process.stdout.write(ANSI.SHOW_CURSOR);
+            process.stdout.write(TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -617,9 +643,11 @@ export async function showTestSelector(tests, options = {}) {
  *
  * @param {Array} topics - Array of {name, title, description}
  * @param {Object} options - Options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
  * @returns {Promise<{name: string, title: string}|null>} - Selected topic or null if cancelled
  */
 export async function showHelpSelector(topics, options = {}) {
+    const theme = options.theme || baseTheme;
     const {
         prompt = 'Help topic> ',
         initialFilter = '',
@@ -644,24 +672,24 @@ export async function showHelpSelector(topics, options = {}) {
     }));
 
     return new Promise((resolve) => {
-        const selector = new CommandSelector(topicItems, { maxVisible });
+        const selector = new CommandSelector(topicItems, { maxVisible, theme });
         selector.updateFilter(initialFilter);
 
         let currentInput = initialFilter;
         let maxRenderedLines = 0;
 
-        process.stdout.write(ANSI.HIDE_CURSOR);
+        process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
             if (maxRenderedLines === 0) return;
 
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
             }
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
-            process.stdout.write(`\r${ANSI.CLEAR_LINE}`);
+            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
         };
 
         const render = () => {
@@ -671,7 +699,7 @@ export async function showHelpSelector(topics, options = {}) {
 
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${ANSI.CLEAR_LINE}${line}`);
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
             });
 
             if (lines.length > maxRenderedLines) {
@@ -679,14 +707,14 @@ export async function showHelpSelector(topics, options = {}) {
             }
 
             for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(ANSI.MOVE_UP);
+                process.stdout.write(TERMINAL.MOVE_UP);
             }
-            process.stdout.write(`\r${ANSI.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
         };
 
         const cleanup = () => {
             clearDisplay();
-            process.stdout.write(ANSI.SHOW_CURSOR);
+            process.stdout.write(TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -748,6 +776,159 @@ export async function showHelpSelector(topics, options = {}) {
                         title: selected.title || selected.description,
                         type: selected.type,
                     });
+                }
+                return;
+            }
+
+            if (keyStr.length === 1 && keyStr >= ' ') {
+                currentInput += keyStr;
+                selector.updateFilter(currentInput);
+                render();
+            }
+        };
+
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', handleKey);
+
+        render();
+    });
+}
+
+/**
+ * Show an interactive repository selector and return the selected repo
+ *
+ * @param {Array} repos - Array of {name, source, enabled, editable}
+ * @param {Object} options - Options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
+ * @returns {Promise<{name: string}|null>} - Selected repo or null if cancelled
+ */
+export async function showRepoSelector(repos, options = {}) {
+    const theme = options.theme || baseTheme;
+    const {
+        prompt = 'Select repository> ',
+        initialFilter = '',
+        maxVisible = 8,
+    } = options;
+
+    if (!repos || repos.length === 0) {
+        return null;
+    }
+
+    // Check if stdin is a TTY
+    if (!process.stdin.isTTY) {
+        console.error('Repo selector requires an interactive terminal');
+        return null;
+    }
+
+    // Transform repos to command-like format for CommandSelector
+    const repoItems = repos.map(repo => {
+        const status = repo.enabled ? '✓' : '✗';
+        const editLabel = repo.editable ? 'editable' : 'read-only';
+        return {
+            name: repo.name,
+            description: `${status} ${editLabel} - ${repo.source || repo.localPath || ''}`,
+            ...repo,
+        };
+    });
+
+    return new Promise((resolve) => {
+        const selector = new CommandSelector(repoItems, { maxVisible, theme });
+        selector.updateFilter(initialFilter);
+
+        let currentInput = initialFilter;
+        let maxRenderedLines = 0;
+
+        process.stdout.write(TERMINAL.HIDE_CURSOR);
+
+        const clearDisplay = () => {
+            if (maxRenderedLines === 0) return;
+
+            for (let i = 0; i < maxRenderedLines; i++) {
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
+            }
+            for (let i = 0; i < maxRenderedLines; i++) {
+                process.stdout.write(TERMINAL.MOVE_UP);
+            }
+            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
+        };
+
+        const render = () => {
+            clearDisplay();
+
+            process.stdout.write(`${prompt}${currentInput}`);
+
+            const lines = selector.render();
+            lines.forEach(line => {
+                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
+            });
+
+            if (lines.length > maxRenderedLines) {
+                maxRenderedLines = lines.length;
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                process.stdout.write(TERMINAL.MOVE_UP);
+            }
+            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+        };
+
+        const cleanup = () => {
+            clearDisplay();
+            process.stdout.write(TERMINAL.SHOW_CURSOR);
+            process.stdin.setRawMode(false);
+            process.stdin.removeListener('data', handleKey);
+        };
+
+        const handleKey = (key) => {
+            const keyStr = key.toString();
+
+            if (keyStr === '\x1b[A') {
+                selector.moveUp();
+                render();
+                return;
+            }
+
+            if (keyStr === '\x1b[B') {
+                selector.moveDown();
+                render();
+                return;
+            }
+
+            if (keyStr === '\r' || keyStr === '\n') {
+                const selected = selector.getSelected();
+                cleanup();
+                if (selected) {
+                    resolve({ name: selected.name });
+                } else {
+                    resolve(null);
+                }
+                return;
+            }
+
+            if (keyStr === '\x1b' || keyStr === '\x03') {
+                cleanup();
+                resolve(null);
+                return;
+            }
+
+            if (keyStr === '\x7f' || keyStr === '\b') {
+                if (currentInput.length > 0) {
+                    currentInput = currentInput.slice(0, -1);
+                    selector.updateFilter(currentInput);
+                    render();
+                } else {
+                    cleanup();
+                    resolve(null);
+                }
+                return;
+            }
+
+            if (keyStr === '\t') {
+                const selected = selector.getSelected();
+                if (selected) {
+                    cleanup();
+                    resolve({ name: selected.name });
                 }
                 return;
             }

@@ -6,8 +6,9 @@
 
 import readline from 'node:readline';
 import { LineEditor } from '../ui/LineEditor.mjs';
-import { showCommandSelector, showSkillSelector } from '../ui/CommandSelector.mjs';
+import { showCommandSelector, showSkillSelector, showRepoSelector } from '../ui/CommandSelector.mjs';
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
+import { UIContext } from '../ui/UIContext.mjs';
 
 /**
  * InteractivePrompt class for handling user input with interactive features.
@@ -21,6 +22,7 @@ export class InteractivePrompt {
      * @param {SlashCommandHandler} options.slashHandler - Slash command handler
      * @param {Array} options.commandList - List of available commands
      * @param {Function} options.getUserSkills - Callback to get user skills
+     * @param {Function} [options.getRepositories] - Callback to get configured repositories
      * @param {string} [options.prompt='SkillManager> '] - Prompt string
      */
     constructor(options) {
@@ -28,11 +30,16 @@ export class InteractivePrompt {
         this.slashHandler = options.slashHandler;
         this.commandList = options.commandList;
         this.getUserSkills = options.getUserSkills;
-        this.promptString = options.prompt || 'SkillManager> ';
+        this.getRepositories = options.getRepositories || (() => []);
 
-        // ANSI escape codes for hint display
-        this.HINT_COLOR = '\x1b[90m'; // dim gray
-        this.RESET_COLOR = '\x1b[0m';
+        // Get colors from theme
+        const theme = UIContext.getTheme();
+        this.colors = theme.colors;
+
+        // Styled prompt like Claude Code: "> " with cyan color
+        this.promptString = `${this.colors.cyan}${this.colors.bold}>${this.colors.reset} `;
+        // Right side hint
+        this.rightHint = `${this.colors.dim}↵ send${this.colors.reset}`;
 
         // Track current hint for cleanup
         this.currentHintLines = 0;
@@ -74,7 +81,11 @@ export class InteractivePrompt {
             }
 
             // LineEditor handles buffer and cursor position
-            const editor = new LineEditor({ prompt: self.promptString });
+            const editor = new LineEditor({
+                prompt: self.promptString,
+                rightHint: self.rightHint,
+                boxed: true,
+            });
             let showingSelector = false;
             let savedBuffer = ''; // Save current input when navigating history
             let historyIndex = -1; // -1 means "new input", 0+ means history index from end
@@ -94,6 +105,10 @@ export class InteractivePrompt {
             LineEditor.enableBracketedPaste();
 
             const cleanup = () => {
+                // Draw bottom border if boxed mode
+                if (editor.boxed) {
+                    editor.drawBottomBorder();
+                }
                 LineEditor.disableBracketedPaste();
                 process.stdin.setRawMode(false);
                 process.stdin.removeListener('data', handleKey);
@@ -164,13 +179,17 @@ export class InteractivePrompt {
                     if (showingSelector) return;
                     showingSelector = true;
 
+                    // Clear the boxed input before showing selector
+                    if (editor.boxed) {
+                        editor.clearBox();
+                    }
+
                     // Remove the raw mode listener temporarily
                     process.stdin.removeListener('data', handleKey);
                     process.stdin.setRawMode(false);
 
-                    // Show interactive command selector
+                    // Show interactive command selector (Claude Code style)
                     const selected = await showCommandSelector(self.commandList, {
-                        prompt: `${self.promptString}/`,
                         initialFilter: '',
                     });
 
@@ -185,7 +204,7 @@ export class InteractivePrompt {
                             if (userSkills.length === 0) {
                                 cleanup();
                                 process.stdout.write('\n');
-                                console.log('\x1b[33mNo user skills found. Create one first.\x1b[0m');
+                                console.log(`${self.colors.yellow}No user skills found. Create one first.${self.colors.reset}`);
                                 resolve(''); // Return empty to re-prompt
                                 return;
                             }
@@ -210,9 +229,43 @@ export class InteractivePrompt {
                                     resolve(fullCommand);
                                 }
                             } else {
-                                // User cancelled skill selection - return to prompt
+                                // User cancelled skill selection - return to boxed input
                                 showingSelector = false;
                                 editor.clear();
+                                editor.boxDrawn = false;
+                                editor.render();
+                                process.stdin.setRawMode(true);
+                                process.stdin.on('data', handleKey);
+                            }
+                        } else if (selected.needsRepoArg) {
+                            // Show repo selector
+                            process.stdout.write(`${selected.name} `);
+
+                            const repos = self.getRepositories();
+                            if (repos.length === 0) {
+                                cleanup();
+                                process.stdout.write('\n');
+                                console.log(`${self.colors.yellow}No repositories configured. Use /add-repo to add one.${self.colors.reset}`);
+                                resolve(''); // Return empty to re-prompt
+                                return;
+                            }
+
+                            const selectedRepo = await showRepoSelector(repos, {
+                                prompt: `${selected.name} `,
+                                initialFilter: '',
+                            });
+
+                            if (selectedRepo) {
+                                // Execute immediately with repo name
+                                cleanup();
+                                const fullCommand = `${selected.name} ${selectedRepo.name}`;
+                                process.stdout.write(`${selectedRepo.name}\n`);
+                                resolve(fullCommand);
+                            } else {
+                                // User cancelled repo selection - return to boxed input
+                                showingSelector = false;
+                                editor.clear();
+                                editor.boxDrawn = false;
                                 editor.render();
                                 process.stdin.setRawMode(true);
                                 process.stdin.on('data', handleKey);
@@ -231,9 +284,10 @@ export class InteractivePrompt {
                             }
                         }
                     } else {
-                        // User cancelled - return to normal prompt
+                        // User cancelled - return to boxed input
                         showingSelector = false;
                         editor.clear();
+                        editor.boxDrawn = false; // Reset so box is redrawn
                         editor.render();
                         process.stdin.setRawMode(true);
                         process.stdin.on('data', handleKey);
@@ -298,7 +352,7 @@ export class InteractivePrompt {
                     return null;
                 };
 
-                // Helper to check if buffer is a command needing text args (not skill args)
+                // Helper to check if buffer is a command needing text args (not skill args or repo args)
                 const getCommandNeedingTextArg = () => {
                     const buf = editor.getBuffer();
                     if (!buf.startsWith('/')) return null;
@@ -308,8 +362,24 @@ export class InteractivePrompt {
                     // Only trigger if no args yet (just the command)
                     if (args && args.trim()) return null;
                     const cmdDef = SlashCommandHandler.COMMANDS[command];
-                    // Command needs text args but not skill args
-                    if (cmdDef && cmdDef.args === 'required' && !cmdDef.needsSkillArg) {
+                    // Command needs text args but not skill args or repo args
+                    if (cmdDef && cmdDef.args === 'required' && !cmdDef.needsSkillArg && !cmdDef.needsRepoArg) {
+                        return { command, cmdDef };
+                    }
+                    return null;
+                };
+
+                // Helper to check if buffer is a command needing repo arg
+                const getCommandNeedingRepoArg = () => {
+                    const buf = editor.getBuffer();
+                    if (!buf.startsWith('/')) return null;
+                    const parsed = self.slashHandler.parseSlashCommand(buf);
+                    if (!parsed) return null;
+                    const { command, args } = parsed;
+                    // Only trigger if no args yet (just the command)
+                    if (args && args.trim()) return null;
+                    const cmdDef = SlashCommandHandler.COMMANDS[command];
+                    if (cmdDef && cmdDef.needsRepoArg) {
                         return { command, cmdDef };
                     }
                     return null;
@@ -331,7 +401,7 @@ export class InteractivePrompt {
                     if (userSkills.length === 0) {
                         cleanup();
                         process.stdout.write('\n');
-                        console.log('\x1b[33mNo user skills found. Create one first.\x1b[0m');
+                        console.log(`${self.colors.yellow}No user skills found. Create one first.${self.colors.reset}`);
                         resolve(''); // Return empty to re-prompt
                         return;
                     }
@@ -355,22 +425,70 @@ export class InteractivePrompt {
                             resolve(fullCommand);
                         }
                     } else {
-                        // User cancelled - return to prompt with buffer intact
+                        // User cancelled - return to boxed input
                         showingSelector = false;
+                        editor.boxDrawn = false;
                         editor.render();
                         process.stdin.setRawMode(true);
                         process.stdin.on('data', handleKey);
                     }
                 };
 
-                // Handle Tab - show skill selector if command needs skill arg, or prompt for text args
+                // Helper to show repo selector for current command
+                const showRepoSelectorForCommand = async (command) => {
+                    if (showingSelector) return;
+                    showingSelector = true;
+
+                    process.stdin.removeListener('data', handleKey);
+                    process.stdin.setRawMode(false);
+
+                    // Clear the line and rewrite with space
+                    process.stdout.write(` `);
+
+                    const repos = self.getRepositories();
+                    if (repos.length === 0) {
+                        cleanup();
+                        process.stdout.write('\n');
+                        console.log(`${self.colors.yellow}No repositories configured. Use /add-repo to add one.${self.colors.reset}`);
+                        resolve(''); // Return empty to re-prompt
+                        return;
+                    }
+
+                    const selectedRepo = await showRepoSelector(repos, {
+                        prompt: `/${command} `,
+                        initialFilter: '',
+                    });
+
+                    if (selectedRepo) {
+                        // Execute immediately with repo name
+                        cleanup();
+                        const fullCommand = `/${command} ${selectedRepo.name}`;
+                        process.stdout.write(`${selectedRepo.name}\n`);
+                        resolve(fullCommand);
+                    } else {
+                        // User cancelled - return to boxed input
+                        showingSelector = false;
+                        editor.boxDrawn = false;
+                        editor.render();
+                        process.stdin.setRawMode(true);
+                        process.stdin.on('data', handleKey);
+                    }
+                };
+
+                // Handle Tab - show skill selector if command needs skill arg, repo selector if needs repo arg, or prompt for text args
                 if (keyStr === '\t') {
                     const cmdInfo = getCommandNeedingSkillArg();
                     if (cmdInfo) {
                         await showSkillSelectorForCommand(cmdInfo.command);
                         return;
                     }
-                    // Check if command needs text args (not skill args)
+                    // Check if command needs repo arg
+                    const repoArgInfo = getCommandNeedingRepoArg();
+                    if (repoArgInfo) {
+                        await showRepoSelectorForCommand(repoArgInfo.command);
+                        return;
+                    }
+                    // Check if command needs text args (not skill args or repo args)
                     const textArgInfo = getCommandNeedingTextArg();
                     if (textArgInfo) {
                         // Show argument input prompt
@@ -383,11 +501,16 @@ export class InteractivePrompt {
                     return;
                 }
 
-                // Handle Space after command that needs skill arg
+                // Handle Space after command that needs skill arg or repo arg
                 if (keyStr === ' ') {
                     const cmdInfo = getCommandNeedingSkillArg();
                     if (cmdInfo) {
                         await showSkillSelectorForCommand(cmdInfo.command);
+                        return;
+                    }
+                    const repoArgInfo = getCommandNeedingRepoArg();
+                    if (repoArgInfo) {
+                        await showRepoSelectorForCommand(repoArgInfo.command);
                         return;
                     }
                     // Fall through to LineEditor for regular space
@@ -420,15 +543,17 @@ export class InteractivePrompt {
      * @private
      */
     async _handleArgInputFlow(commandName, cmdDef, resolve, cleanup) {
+        const { gray, cyan, yellow, reset } = this.colors;
+
         // Show the command and usage hint
         process.stdout.write(`${commandName}\n`);
-        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+        process.stdout.write(`${gray}${'─'.repeat(50)}${reset}\n`);
 
         // Show usage and description
-        process.stdout.write(`\x1b[36m  Usage:\x1b[0m ${cmdDef.usage}\n`);
-        process.stdout.write(`\x1b[36m  About:\x1b[0m ${cmdDef.description}\n`);
-        process.stdout.write('\x1b[90m  Ctrl+C to cancel\x1b[0m\n');
-        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+        process.stdout.write(`${cyan}  Usage:${reset} ${cmdDef.usage}\n`);
+        process.stdout.write(`${cyan}  About:${reset} ${cmdDef.description}\n`);
+        process.stdout.write(`${gray}  Ctrl+C to cancel${reset}\n`);
+        process.stdout.write(`${gray}${'─'.repeat(50)}${reset}\n`);
 
         // Prompt for arguments using readline
         const rl = readline.createInterface({
@@ -443,7 +568,7 @@ export class InteractivePrompt {
             if (answered) return;
             answered = true;
             rl.close();
-            process.stdout.write('\n\x1b[33mCancelled\x1b[0m\n');
+            process.stdout.write(`\n${yellow}Cancelled${reset}\n`);
             // Resolve with empty string to return to main loop
             resolve('');
         });
@@ -463,6 +588,8 @@ export class InteractivePrompt {
      * @private
      */
     async _handleSkillInputFlow(commandName, selectedSkill, userSkills, resolve, cleanup) {
+        const { gray, cyan, yellow, reset } = this.colors;
+
         // Show hint about the skill and prompt for input
         const skillInfo = userSkills.find(s => (s.shortName || s.name) === selectedSkill.name);
         const hint = skillInfo?.description || skillInfo?.summary || '';
@@ -470,31 +597,31 @@ export class InteractivePrompt {
 
         // Clear line and show skill info
         process.stdout.write(`${selectedSkill.name}\n`);
-        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+        process.stdout.write(`${gray}${'─'.repeat(50)}${reset}\n`);
 
         // Show skill type and description
-        process.stdout.write(`\x1b[36m  Skill:\x1b[0m ${selectedSkill.name} \x1b[90m[${skillType}]\x1b[0m\n`);
+        process.stdout.write(`${cyan}  Skill:${reset} ${selectedSkill.name} ${gray}[${skillType}]${reset}\n`);
         if (hint) {
-            process.stdout.write(`\x1b[36m  About:\x1b[0m ${hint}\n`);
+            process.stdout.write(`${cyan}  About:${reset} ${hint}\n`);
         }
 
         // Show command-specific input guidance
         if (commandName === '/exec') {
             if (skillType === 'code') {
-                process.stdout.write(`\x1b[36m  Input:\x1b[0m Type your request in natural language\n`);
+                process.stdout.write(`${cyan}  Input:${reset} Type your request in natural language\n`);
             } else if (skillType === 'interactive') {
-                process.stdout.write(`\x1b[36m  Input:\x1b[0m Provide any initial context or press Enter to start\n`);
+                process.stdout.write(`${cyan}  Input:${reset} Provide any initial context or press Enter to start\n`);
             } else {
-                process.stdout.write(`\x1b[36m  Input:\x1b[0m Type your input or press Enter to execute\n`);
+                process.stdout.write(`${cyan}  Input:${reset} Type your input or press Enter to execute\n`);
             }
         } else if (commandName === '/refine') {
-            process.stdout.write(`\x1b[36m  Input:\x1b[0m Describe what to improve or requirements to meet\n`);
+            process.stdout.write(`${cyan}  Input:${reset} Describe what to improve or requirements to meet\n`);
         } else if (commandName === '/update') {
-            process.stdout.write(`\x1b[36m  Input:\x1b[0m Specify section name and new content\n`);
+            process.stdout.write(`${cyan}  Input:${reset} Specify section name and new content\n`);
         }
 
-        process.stdout.write('\x1b[90m  Ctrl+C to cancel\x1b[0m\n');
-        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+        process.stdout.write(`${gray}  Ctrl+C to cancel${reset}\n`);
+        process.stdout.write(`${gray}${'─'.repeat(50)}${reset}\n`);
 
         // Prompt for input using readline
         const rl = readline.createInterface({
@@ -509,7 +636,7 @@ export class InteractivePrompt {
             if (answered) return;
             answered = true;
             rl.close();
-            process.stdout.write('\n\x1b[33mCancelled\x1b[0m\n');
+            process.stdout.write(`\n${yellow}Cancelled${reset}\n`);
             // Resolve with empty string to return to main loop
             resolve('');
         });
@@ -529,6 +656,8 @@ export class InteractivePrompt {
      * @private
      */
     async _handleSkillInputFlowForCommand(command, selectedSkill, userSkills, resolve, cleanup) {
+        const { gray, cyan, yellow, reset } = this.colors;
+
         // Show hint about the skill and prompt for input
         const skillInfo = userSkills.find(s => (s.shortName || s.name) === selectedSkill.name);
         const hint = skillInfo?.description || skillInfo?.summary || '';
@@ -536,31 +665,31 @@ export class InteractivePrompt {
 
         // Clear line and show skill info
         process.stdout.write(`${selectedSkill.name}\n`);
-        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+        process.stdout.write(`${gray}${'─'.repeat(50)}${reset}\n`);
 
         // Show skill type and description
-        process.stdout.write(`\x1b[36m  Skill:\x1b[0m ${selectedSkill.name} \x1b[90m[${skillType}]\x1b[0m\n`);
+        process.stdout.write(`${cyan}  Skill:${reset} ${selectedSkill.name} ${gray}[${skillType}]${reset}\n`);
         if (hint) {
-            process.stdout.write(`\x1b[36m  About:\x1b[0m ${hint}\n`);
+            process.stdout.write(`${cyan}  About:${reset} ${hint}\n`);
         }
 
         // Show command-specific input guidance
         if (command === 'exec') {
             if (skillType === 'code') {
-                process.stdout.write(`\x1b[36m  Input:\x1b[0m Type your request in natural language\n`);
+                process.stdout.write(`${cyan}  Input:${reset} Type your request in natural language\n`);
             } else if (skillType === 'interactive') {
-                process.stdout.write(`\x1b[36m  Input:\x1b[0m Provide any initial context or press Enter to start\n`);
+                process.stdout.write(`${cyan}  Input:${reset} Provide any initial context or press Enter to start\n`);
             } else {
-                process.stdout.write(`\x1b[36m  Input:\x1b[0m Type your input or press Enter to execute\n`);
+                process.stdout.write(`${cyan}  Input:${reset} Type your input or press Enter to execute\n`);
             }
         } else if (command === 'refine') {
-            process.stdout.write(`\x1b[36m  Input:\x1b[0m Describe what to improve or requirements to meet\n`);
+            process.stdout.write(`${cyan}  Input:${reset} Describe what to improve or requirements to meet\n`);
         } else if (command === 'update') {
-            process.stdout.write(`\x1b[36m  Input:\x1b[0m Specify section name and new content\n`);
+            process.stdout.write(`${cyan}  Input:${reset} Specify section name and new content\n`);
         }
 
-        process.stdout.write('\x1b[90m  Ctrl+C to cancel\x1b[0m\n');
-        process.stdout.write('\x1b[90m' + '─'.repeat(50) + '\x1b[0m\n');
+        process.stdout.write(`${gray}  Ctrl+C to cancel${reset}\n`);
+        process.stdout.write(`${gray}${'─'.repeat(50)}${reset}\n`);
 
         // Prompt for input using readline
         const rl = readline.createInterface({
@@ -575,7 +704,7 @@ export class InteractivePrompt {
             if (answered) return;
             answered = true;
             rl.close();
-            process.stdout.write('\n\x1b[33mCancelled\x1b[0m\n');
+            process.stdout.write(`\n${yellow}Cancelled${reset}\n`);
             // Resolve with empty string to return to main loop
             resolve('');
         });
@@ -622,7 +751,7 @@ export class InteractivePrompt {
                     // Save cursor position, move to next line, show hint, restore cursor
                     process.stdout.write('\x1b[s'); // Save cursor
                     process.stdout.write('\n\x1b[K'); // New line, clear it
-                    process.stdout.write(`${this.HINT_COLOR}  ${hint}${this.RESET_COLOR}`);
+                    process.stdout.write(`${this.colors.gray}  ${hint}${this.colors.reset}`);
                     process.stdout.write('\x1b[u'); // Restore cursor
                     this.currentHintLines = 1;
                 } else {

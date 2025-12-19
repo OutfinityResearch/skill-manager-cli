@@ -2,19 +2,20 @@
  * Test Result Formatter
  *
  * Formats test results for display in the CLI.
+ *
+ * @module ui/TestResultFormatter
  */
 
-// ANSI color codes
-const colors = {
-    reset: '\x1b[0m',
-    bright: '\x1b[1m',
-    dim: '\x1b[2m',
-    green: '\x1b[32m',
-    red: '\x1b[31m',
-    yellow: '\x1b[33m',
-    cyan: '\x1b[36m',
-    gray: '\x1b[90m',
-};
+import { baseTheme } from './themes/base.mjs';
+
+/**
+ * Get colors from theme or use baseTheme as fallback
+ * @param {Object} [theme] - Optional theme object
+ * @returns {Object} - Colors object
+ */
+function getColors(theme) {
+    return (theme && theme.colors) || baseTheme.colors;
+}
 
 /**
  * Format duration in human-readable form
@@ -29,9 +30,12 @@ export function formatDuration(ms) {
 /**
  * Format a single test result
  * @param {Object} result - Test result object
+ * @param {Object} [options] - Formatting options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
  * @returns {string} Formatted result string
  */
-export function formatTestResult(result) {
+export function formatTestResult(result, options = {}) {
+    const colors = getColors(options.theme);
     const lines = [];
     const { skillName, success, passed, failed, duration, errors } = result;
 
@@ -67,22 +71,25 @@ export function formatTestResult(result) {
 /**
  * Format aggregated test suite results
  * @param {Object} suiteResult - Suite result from runTestSuite
+ * @param {Object} [options] - Formatting options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
  * @returns {string} Formatted result string
  */
-export function formatSuiteResults(suiteResult) {
+export function formatSuiteResults(suiteResult, options = {}) {
+    const colors = getColors(options.theme);
     const { success, totalTests, totalPassed, totalFailed, results, duration } = suiteResult;
     const lines = [];
 
     // Header
     lines.push(`${colors.cyan}${'─'.repeat(50)}${colors.reset}`);
-    lines.push(`${colors.bright}Test Results${colors.reset}`);
+    lines.push(`${colors.bold}Test Results${colors.reset}`);
     lines.push(`${colors.cyan}${'─'.repeat(50)}${colors.reset}`);
     lines.push('');
 
     // Individual results
     if (results && results.length > 0) {
         for (const result of results) {
-            lines.push(formatTestResult(result));
+            lines.push(formatTestResult(result, options));
             lines.push('');
         }
     }
@@ -91,9 +98,9 @@ export function formatSuiteResults(suiteResult) {
     lines.push(`${colors.cyan}${'─'.repeat(50)}${colors.reset}`);
 
     if (success) {
-        lines.push(`${colors.green}${colors.bright}✓ All tests passed${colors.reset}`);
+        lines.push(`${colors.green}${colors.bold}✓ All tests passed${colors.reset}`);
     } else {
-        lines.push(`${colors.red}${colors.bright}✗ Some tests failed${colors.reset}`);
+        lines.push(`${colors.red}${colors.bold}✗ Some tests failed${colors.reset}`);
     }
 
     lines.push('');
@@ -111,9 +118,12 @@ export function formatSuiteResults(suiteResult) {
 /**
  * Format a compact single-line result
  * @param {Object} result - Test result object
+ * @param {Object} [options] - Formatting options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
  * @returns {string} Single line result
  */
-export function formatCompactResult(result) {
+export function formatCompactResult(result, options = {}) {
+    const colors = getColors(options.theme);
     const { skillName, success, passed, failed, duration } = result;
 
     const status = success ? `${colors.green}✓${colors.reset}` : `${colors.red}✗${colors.reset}`;

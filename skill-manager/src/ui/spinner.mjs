@@ -1,7 +1,14 @@
 /**
  * CLI Spinner - Animated loading indicator for long-running operations
+ *
+ * @module ui/spinner
  */
 
+import { baseTheme, colors as baseColors } from './themes/base.mjs';
+
+/**
+ * Available spinner frame styles
+ */
 const SPINNER_FRAMES = {
     dots: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
     line: ['|', '/', '-', '\\'],
@@ -14,21 +21,24 @@ const SPINNER_FRAMES = {
     clock: ['🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛'],
 };
 
-const COLORS = {
-    reset: '\x1b[0m',
-    dim: '\x1b[2m',
-    cyan: '\x1b[36m',
-    yellow: '\x1b[33m',
-    green: '\x1b[32m',
-    blue: '\x1b[34m',
-    magenta: '\x1b[35m',
-};
-
 export class Spinner {
+    /**
+     * @param {Object} options - Spinner options
+     * @param {string} [options.style='dots'] - Spinner animation style
+     * @param {number} [options.interval=80] - Animation interval in ms
+     * @param {string} [options.color='cyan'] - Spinner color name
+     * @param {Object} [options.stream=process.stderr] - Output stream
+     * @param {boolean} [options.showInterruptHint=false] - Show ESC hint
+     * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
+     */
     constructor(options = {}) {
+        // Use provided theme or fall back to baseTheme
+        this.theme = options.theme || baseTheme;
+        this.colors = this.theme.colors || baseColors;
+
         this.frames = SPINNER_FRAMES[options.style] || SPINNER_FRAMES.dots;
-        this.interval = options.interval || 80;
-        this.color = COLORS[options.color] || COLORS.cyan;
+        this.interval = options.interval || this.theme.spinner?.interval || 80;
+        this.color = this.colors[options.color] || this.colors.cyan;
         this.stream = options.stream || process.stderr;
 
         this.frameIndex = 0;
@@ -62,11 +72,11 @@ export class Spinner {
     render() {
         const frame = this.frames[this.frameIndex];
         const elapsed = this.getElapsed();
-        const line = `${this.color}${frame}${COLORS.reset} ${this.message} ${COLORS.dim}${elapsed}${COLORS.reset}`;
+        const line = `${this.color}${frame}${this.colors.reset} ${this.message} ${this.colors.dim}${elapsed}${this.colors.reset}`;
 
         if (this.showInterruptHint) {
             // Clear current line and line below, then write both lines
-            const hint = `${COLORS.dim}   Esc to interrupt${COLORS.reset}`;
+            const hint = `${this.colors.dim}   Esc to interrupt${this.colors.reset}`;
             this.stream.write(`\r\x1b[K${line}\n\x1b[K${hint}\x1b[A\r`);
         } else {
             // Clear line and write
@@ -130,15 +140,15 @@ export class Spinner {
     }
 
     succeed(message) {
-        return this.stop(`${COLORS.green}✓${COLORS.reset} ${message || this.message}`);
+        return this.stop(`${this.colors.green}✓${this.colors.reset} ${message || this.message}`);
     }
 
     fail(message) {
-        return this.stop(`${COLORS.yellow}✗${COLORS.reset} ${message || this.message}`);
+        return this.stop(`${this.colors.yellow}✗${this.colors.reset} ${message || this.message}`);
     }
 
     info(message) {
-        return this.stop(`${COLORS.blue}ℹ${COLORS.reset} ${message || this.message}`);
+        return this.stop(`${this.colors.blue}ℹ${this.colors.reset} ${message || this.message}`);
     }
 
     stop(finalMessage) {
@@ -163,7 +173,7 @@ export class Spinner {
         // Write final message if provided
         if (finalMessage) {
             const elapsed = this.getElapsed();
-            this.stream.write(`${finalMessage} ${COLORS.dim}${elapsed}${COLORS.reset}\n`);
+            this.stream.write(`${finalMessage} ${this.colors.dim}${elapsed}${this.colors.reset}\n`);
         }
 
         return this;
@@ -172,6 +182,10 @@ export class Spinner {
 
 /**
  * Create and start a spinner with a single call
+ *
+ * @param {string} message - Initial spinner message
+ * @param {Object} [options] - Spinner options (see Spinner constructor)
+ * @returns {Spinner} - Started spinner instance
  */
 export function createSpinner(message, options = {}) {
     return new Spinner(options).start(message);

@@ -4,17 +4,20 @@
  * Provides contextual help with topics, examples, and detailed explanations.
  */
 
-// ANSI color codes
+import { colors as baseColors } from './themes/base.mjs';
+
+// Use theme colors (aliased to C for brevity in content strings)
 const C = {
-    reset: '\x1b[0m',
-    bold: '\x1b[1m',
-    dim: '\x1b[2m',
-    cyan: '\x1b[36m',
-    yellow: '\x1b[33m',
-    green: '\x1b[32m',
-    blue: '\x1b[34m',
-    magenta: '\x1b[35m',
-    white: '\x1b[37m',
+    reset: baseColors.reset,
+    bold: baseColors.bold,
+    dim: baseColors.dim,
+    cyan: baseColors.cyan,
+    yellow: baseColors.yellow,
+    green: baseColors.green,
+    blue: baseColors.blue,
+    magenta: baseColors.magenta,
+    white: baseColors.white,
+    red: baseColors.red,
 };
 
 /**

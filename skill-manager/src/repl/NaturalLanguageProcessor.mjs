@@ -8,6 +8,7 @@ import readline from 'node:readline';
 import { ActionReporter } from 'achillesAgentLib/utils/ActionReporter.mjs';
 import { createSpinner } from '../ui/spinner.mjs';
 import { renderMarkdown } from '../ui/MarkdownRenderer.mjs';
+import { colors, icons, style, line, box } from '../ui/theme.mjs';
 
 /**
  * NaturalLanguageProcessor class for handling LLM interactions.
@@ -110,11 +111,11 @@ export class NaturalLanguageProcessor {
                 ? actionReporter.history[actionReporter.history.length - 1]?.duration
                 : null;
             const durationInfo = elapsed ? ` (${(elapsed / 1000).toFixed(1)}s)` : '';
-            console.log(`✓ Done${modelInfo}${durationInfo}`);
+            console.log(`${style(icons.check, colors.green)} Done${style(modelInfo, colors.dim)}${style(durationInfo, colors.dim)}`);
 
-            console.log('-'.repeat(60));
+            console.log(style(line(60, box.horizontal), colors.dim));
             console.log(this.isMarkdownEnabled() ? renderMarkdown(result) : result);
-            console.log('-'.repeat(60) + '\n');
+            console.log(style(line(60, box.horizontal), colors.dim) + '\n');
         } catch (error) {
             if (wasInterrupted || error.name === 'AbortError') {
                 actionReporter.interrupted('Operation cancelled');

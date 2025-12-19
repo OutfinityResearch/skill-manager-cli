@@ -152,6 +152,7 @@ export class SlashCommandHandler {
             description: 'Remove a repository (--delete removes cloned files)',
             args: 'required',
             needsSkillArg: false,
+            needsRepoArg: true,
         },
         'update-repo': {
             skill: null,
@@ -166,6 +167,7 @@ export class SlashCommandHandler {
             description: 'Enable a disabled repository',
             args: 'required',
             needsSkillArg: false,
+            needsRepoArg: true,
         },
         'disable-repo': {
             skill: null,
@@ -173,6 +175,7 @@ export class SlashCommandHandler {
             description: 'Disable a repository (keeps config)',
             args: 'required',
             needsSkillArg: false,
+            needsRepoArg: true,
         },
         'edit-repo': {
             skill: null,
@@ -180,6 +183,7 @@ export class SlashCommandHandler {
             description: 'Toggle whether a repo\'s skills can be listed/read/modified',
             args: 'required',
             needsSkillArg: false,
+            needsRepoArg: true,
         },
     };
 

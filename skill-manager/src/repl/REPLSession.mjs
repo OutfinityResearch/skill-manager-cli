@@ -18,6 +18,7 @@ import { NaturalLanguageProcessor } from './NaturalLanguageProcessor.mjs';
 import { discoverSkillTests, runTestFile, runTestSuite } from '../lib/testDiscovery.mjs';
 import { formatTestResult, formatSuiteResults } from '../ui/TestResultFormatter.mjs';
 import { showHelp, getHelpTopics, getCommandHelp } from '../ui/HelpSystem.mjs';
+import { UIContext } from '../ui/UIContext.mjs';
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -83,7 +84,7 @@ export class REPLSession {
             slashHandler: this.slashHandler,
             commandList: this.commandList,
             getUserSkills: () => this.getUserSkills(),
-            prompt: 'SkillManager> ',
+            getRepositories: () => this.repoManager?.listRepositories() || [],
         });
 
         this.quickCommands = new QuickCommands({
@@ -181,12 +182,31 @@ export class REPLSession {
      */
     _showBanner() {
         const userSkills = this.getUserSkills();
+        const theme = UIContext.getTheme();
+        const { colors, icons } = theme;
 
-        console.log('\n╔══════════════════════════════════════════════════════════╗');
-        console.log('║           Skill Manager Agent - Interactive CLI          ║');
-        console.log('╚══════════════════════════════════════════════════════════╝\n');
-        console.log(`Working directory: ${this.workingDir}`);
-        console.log(`Skills directory: ${this.skillsDir}`);
+        // Helper to apply style
+        const style = (text, ...styles) => {
+            const styleStr = styles.map(s => colors[s] || s).join('');
+            return `${styleStr}${text}${colors.reset}`;
+        };
+
+        // Helper to create header bar
+        const headerBar = (title, width = 50) => {
+            const padding = Math.floor((width - title.length - 2) / 2);
+            const leftPad = '─'.repeat(padding);
+            const rightPad = '─'.repeat(width - title.length - 2 - padding);
+            return `${colors.cyan}${leftPad} ${colors.bold}${title}${colors.reset}${colors.cyan} ${rightPad}${colors.reset}`;
+        };
+
+        // Minimal header
+        console.log('');
+        console.log(headerBar('Skill Manager', 50));
+        console.log('');
+
+        // Session info as key-value pairs
+        const shortWorkDir = this.workingDir.replace(process.env.HOME, '~');
+        console.log(`  ${style('cwd', 'cyan')}  ${shortWorkDir}`);
 
         // Show LLM model info
         try {
@@ -195,27 +215,47 @@ export class REPLSession {
                 const orchestratorMode = process.env.ACHILLES_ORCHESTRATOR_MODE || 'fast';
                 const models = orchestratorMode === 'deep' ? description.deepModels : description.fastModels;
                 const primaryModel = models?.[0]?.name || 'unknown';
-                const fallbacks = models?.slice(1, 3).map(m => m.name).join(', ');
-                const fallbackInfo = fallbacks ? ` (fallbacks: ${fallbacks})` : '';
-                console.log(`LLM: ${primaryModel}${fallbackInfo} [${orchestratorMode} mode]`);
+                const modeColor = orchestratorMode === 'deep' ? 'magenta' : 'green';
+                console.log(`  ${style('llm', 'cyan')}  ${primaryModel} ${style(`[${orchestratorMode}]`, modeColor)}`);
             }
         } catch (e) {
             // Ignore errors getting model info
         }
 
+        // Skills summary
         if (userSkills.length > 0) {
-            console.log(`Loaded ${userSkills.length} skill(s):`);
-            userSkills.forEach(s => console.log(`  • [${s.type}] ${s.shortName || s.name}`));
+            console.log('');
+            console.log(`  ${style(icons.bullet, 'green')} ${userSkills.length} skill(s) loaded`);
+
+            // Group skills by type
+            const byType = {};
+            for (const s of userSkills) {
+                const type = s.type || 'unknown';
+                if (!byType[type]) byType[type] = [];
+                byType[type].push(s.shortName || s.name);
+            }
+
+            // Show grouped skills (max 4 per type, then ellipsis)
+            for (const [type, names] of Object.entries(byType)) {
+                const displayNames = names.slice(0, 4);
+                const more = names.length > 4 ? ` ${style(`+${names.length - 4} more`, 'dim')}` : '';
+                console.log(`    ${style(type, 'dim')} ${displayNames.join(', ')}${more}`);
+            }
         } else {
-            console.log('No user skills found. Create one with "create a skill" to get started.');
+            console.log('');
+            console.log(`  ${style(icons.hollowBullet, 'yellow')} No skills found`);
         }
 
-        // Show history info
+        // History hint
         if (this.historyManager.length > 0) {
-            console.log(`Command history: ${this.historyManager.length} entries (use ↑/↓ to navigate, "history" to view)`);
+            console.log('');
+            console.log(`  ${style(icons.bullet, 'dim')} ${this.historyManager.length} history entries ${style('(↑/↓ to navigate)', 'dim')}`);
         }
 
-        console.log('\nCommands: "exit" to quit, type "/" to see all commands, or type any instruction.\n');
+        // Commands hint
+        console.log('');
+        console.log(`  ${style('Type "/" for commands, or describe what you need', 'dim')}`);
+        console.log('');
     }
 
     /**
@@ -339,6 +379,7 @@ export class REPLSession {
         const selected = await showTestSelector(tests, {
             prompt: 'Select test> ',
             maxVisible: 10,
+            theme: UIContext.getTheme(),
         });
 
         if (!selected) {
@@ -401,6 +442,7 @@ export class REPLSession {
             selected = await showTestSelector(options, {
                 prompt: 'Select test> ',
                 maxVisible: 10,
+                theme: UIContext.getTheme(),
             });
         } catch (error) {
             console.error(`\nError showing test selector: ${error.message}\n`);
@@ -496,6 +538,7 @@ export class REPLSession {
             selected = await showHelpSelector(helpItems, {
                 prompt: 'Help> ',
                 maxVisible: 12,
+                theme: UIContext.getTheme(),
             });
         } catch (error) {
             console.error(`\nError showing help selector: ${error.message}\n`);

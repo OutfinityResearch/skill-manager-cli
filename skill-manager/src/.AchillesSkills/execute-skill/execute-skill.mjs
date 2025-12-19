@@ -16,14 +16,20 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     if (typeof prompt === 'string' && prompt.trim()) {
         const trimmed = prompt.trim();
+        // Handle multi-line input: only take the first line for skill name parsing
+        const firstLine = trimmed.split('\n')[0].trim();
+        const restLines = trimmed.split('\n').slice(1).join('\n').trim();
+
         // Check for common patterns like "execute joker with topic=programming"
         // or "joker topic=programming" or just "joker"
-        const withMatch = trimmed.match(/^(\S+)\s+(?:with\s+)?(.+)$/i);
+        const withMatch = firstLine.match(/^(\S+)\s+(?:with\s+)?(.+)$/i);
         if (withMatch) {
             skillName = withMatch[1];
-            skillInput = withMatch[2];
+            // Combine the rest of first line with any additional lines
+            skillInput = restLines ? `${withMatch[2]}\n${restLines}` : withMatch[2];
         } else {
-            skillName = trimmed;
+            skillName = firstLine;
+            skillInput = restLines;
         }
     } else if (prompt && typeof prompt === 'object') {
         skillName = prompt.skillName || prompt.name || prompt.skill;
