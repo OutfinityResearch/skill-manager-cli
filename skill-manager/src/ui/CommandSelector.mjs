@@ -40,14 +40,31 @@ export class CommandSelector {
     }
 
     /**
-     * Filter commands based on current input
+     * Filter commands based on current input, prioritizing exact/prefix matches
      */
     updateFilter(input) {
         this.filter = input.toLowerCase();
-        this.filteredCommands = this.commands.filter(cmd =>
+        const matches = this.commands.filter(cmd =>
             cmd.name.toLowerCase().includes(this.filter) ||
             cmd.description.toLowerCase().includes(this.filter)
         );
+
+        // Sort by match quality: exact > prefix > contains
+        this.filteredCommands = matches.sort((a, b) => {
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+            const aExact = aName === this.filter || aName === `/${this.filter}`;
+            const bExact = bName === this.filter || bName === `/${this.filter}`;
+            const aPrefix = aName.startsWith(this.filter) || aName.startsWith(`/${this.filter}`);
+            const bPrefix = bName.startsWith(this.filter) || bName.startsWith(`/${this.filter}`);
+
+            if (aExact && !bExact) return -1;
+            if (bExact && !aExact) return 1;
+            if (aPrefix && !bPrefix) return -1;
+            if (bPrefix && !aPrefix) return 1;
+            return 0; // Keep original order for same priority
+        });
+
         this.selectedIndex = 0;
         this.scrollOffset = 0;
     }
@@ -105,13 +122,15 @@ export class CommandSelector {
 
             // Claude Code style: selected item has ❯ prefix and cyan highlight
             const prefix = isSelected ? `${magenta}❯${reset}` : ' ';
+            // Pad the raw name before applying colors (ANSI codes would break padEnd calculation)
+            const paddedCmdName = cmd.name.padEnd(16);
             const name = isSelected
-                ? `${cyan}${cmd.name}${reset}`
-                : `${reset}${cmd.name}`;
+                ? `${cyan}${paddedCmdName}${reset}`
+                : `${reset}${paddedCmdName}`;
             const desc = `${gray}${cmd.description}${reset}`;
 
             // Two-column layout: command name (16 chars) + description
-            lines.push(` ${prefix} ${name.padEnd(16)}${desc}`);
+            lines.push(` ${prefix} ${name}${desc}`);
         });
 
         // Show scroll indicator if more below
