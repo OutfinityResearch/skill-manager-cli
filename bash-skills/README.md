@@ -1,37 +1,67 @@
-# Bash Command Skills Repository
+# Bash Command Skill
 
-A collection of secure, validated bash command skills for use with skill-manager-cli.
+A unified bash command skill with tiered permission controls for secure shell command execution.
 
 ## Overview
 
-This repository provides individual skills for common bash commands. Each skill:
-- **Prompts for permission** before executing (like Claude Code)
-- Has a strict allowlist of permitted flags
-- Validates all input paths to prevent traversal attacks
-- Blocks shell injection patterns
-- Has timeout and output size limits
+The `bash` skill allows execution of **any bash command** with intelligent safety controls:
+- **Blocked commands**: Catastrophic operations (rm -rf /, mkfs) are refused entirely
+- **Dangerous commands**: Destructive operations (rm, chmod) require typing "yes"
+- **Caution commands**: Modifying operations (mv, sed -i) show yellow warnings
+- **Normal commands**: Read-only operations use standard permission prompts
 
 ## Permission System
 
-Before executing any command, the skill will prompt for permission:
+Commands are classified by risk tier with appropriate prompts:
 
+### Normal Command (ls, cat, grep, etc.)
 ```
-╭─ Bash Command ────────────────────────────────────────────╮
-│ ls -la /tmp                                               │
-╰───────────────────────────────────────────────────────────╯
-Allow? [y]es once / [a]llow all ls / [n]o: _
+$ ls -la /tmp
+Allow? [y]es / [a]lways / [n]o: _
 ```
 
-### User Options
+### Caution Command (mv, cp, sed -i, etc.)
+```
+Caution
+'mv' modifies files
+$ mv file1.txt file2.txt
+Allow? [y]es / [a]lways / [n]o: _
+```
+
+### Dangerous Command (rm, chmod, kill, etc.)
+```
+DANGEROUS COMMAND
+'rm' can permanently modify or delete data
+$ rm important-file.txt
+Type "yes" to confirm: _
+```
+
+### Blocked Patterns (rm -rf /, mkfs, etc.)
+```
+BLOCKED: Matches blocked dangerous pattern
+This command pattern is not allowed for safety.
+```
+
+## Risk Tiers
+
+| Tier | Commands | Behavior |
+|------|----------|----------|
+| **Blocked** | `rm -rf /`, `mkfs`, `fdisk`, `shred`, fork bombs | Refused entirely |
+| **Dangerous** | `rm`, `rmdir`, `chmod`, `chown`, `kill`, `pkill`, `shutdown` | Red warning, must type "yes" |
+| **Caution** | `mv`, `cp`, `truncate`, `sed -i`, output redirection | Yellow warning, y/a/n prompt |
+| **Normal** | `ls`, `cat`, `grep`, `find`, `head`, `tail`, `pwd`, etc. | Standard y/a/n prompt |
+
+## User Options
 
 | Input | Action |
 |-------|--------|
 | `y` or `yes` | Allow this execution only |
-| `a` or `all` | Allow all future `ls` commands this session |
+| `a` or `always` | Allow all future commands of this type this session |
 | `n` or `no` | Deny execution |
-| `d` or `deny` | Deny all future commands of this type |
 
-### Skip Permissions
+For dangerous commands, only `yes` (full word) is accepted.
+
+## Skip Permissions
 
 For trusted environments, you can skip all permission prompts:
 
@@ -43,10 +73,6 @@ SKIP_BASH_PERMISSIONS=true skill-manager
 # Pass { skipBashPermissions: true } in context
 ```
 
-### Non-Interactive Mode
-
-When running without a terminal (no `promptReader`), commands are denied by default for safety. Use the skip flag to allow execution in scripts.
-
 ## Installation
 
 ```bash
@@ -57,141 +83,70 @@ When running without a terminal (no `promptReader`), commands are denied by defa
 /add-repo ./bash-skills --editable
 ```
 
-## Available Skills
-
-### File Reading
-
-| Skill | Command | Description |
-|-------|---------|-------------|
-| `cat-skill` | `cat` | Display file contents |
-| `head-skill` | `head` | Display first N lines |
-| `tail-skill` | `tail` | Display last N lines |
-
-### Directory Listing
-
-| Skill | Command | Description |
-|-------|---------|-------------|
-| `ls-skill` | `ls` | List directory contents |
-| `find-skill` | `find` | Search for files |
-| `tree-skill` | `tree` | Display directory tree |
-
-### Search & Transform
-
-| Skill | Command | Description |
-|-------|---------|-------------|
-| `grep-skill` | `grep` | Search for patterns |
-| `awk-skill` | `awk` | Text processing |
-| `sed-skill` | `sed` | Stream editing |
-
-### Utilities
-
-| Skill | Command | Description |
-|-------|---------|-------------|
-| `wc-skill` | `wc` | Count lines/words/bytes |
-| `sort-skill` | `sort` | Sort lines |
-| `uniq-skill` | `uniq` | Filter duplicates |
-| `pwd-skill` | `pwd` | Print working directory |
-
 ## Usage Examples
 
 ### Via Natural Language
 ```
-> list all files in /tmp
-> show the first 20 lines of config.json
-> search for "TODO" in all JavaScript files
-> count lines in package.json
+> bash ls -la /tmp
+> bash grep -r "TODO" src/
+> bash find . -name "*.js"
+> bash cat package.json
+> bash head -n 20 log.txt
 ```
 
 ### Via Direct Skill Execution
 ```bash
 # List directory
-/exec ls-skill {"path": "/tmp", "flags": ["-la"]}
+/exec bash "ls -la /tmp"
 
 # Search for pattern
-/exec grep-skill {"path": "src/", "pattern": "function", "flags": ["-rn"]}
+/exec bash "grep -rn 'function' src/"
 
-# Count lines
-/exec wc-skill {"path": "data.txt", "flags": ["-l"]}
+# Find files
+/exec bash "find . -type f -name '*.md'"
 
-# Display first 20 lines
-/exec head-skill {"path": "log.txt", "flagArgs": {"-n": "20"}}
+# Git operations
+/exec bash "git status"
+/exec bash "git log --oneline -10"
 ```
 
 ## Security Model
 
-### Allowlist-Only Flags
+### Command Execution Safety
 
-Each skill has a hardcoded list of allowed flags. Any flag not in the allowlist is rejected.
-
-### Path Validation
-
-- No `..` (directory traversal)
-- No shell expansion (`$()`, backticks, `${}`)
-- No pipes (`|`) or redirects (`>`, `<`)
-- No command chaining (`;`, `&&`, `||`)
-
-### Execution Safety
-
-- Commands run via `spawnSync` with `shell: false`
+- Commands run via `spawnSync` with `shell: false` (no shell injection)
 - 30-second timeout by default
 - 1MB output size limit
 - Non-zero exit codes handled gracefully
 
-## Skill Input Format
+### Blocked Patterns
 
-All skills accept JSON input with these common fields:
+The following patterns are always blocked:
+- `rm -rf /` or `rm -rf /*` (recursive deletion of root)
+- Fork bombs like `:(){ :|:& };:`
+- `dd if=/dev/zero` (disk wipe)
+- `> /dev/sd*` (write to disk device)
+- `chmod 777 /` (insecure permissions on root)
+- Commands: `mkfs`, `fdisk`, `parted`, `shred`
 
-```json
-{
-  "path": "/path/to/target",
-  "flags": ["-l", "-a"],
-  "flagArgs": {"-n": "10"},
-  "pattern": "search pattern"
-}
+### Risk Classification
+
+The risk classifier examines:
+1. The command name (is it inherently dangerous?)
+2. The full command string (does it match blocked patterns?)
+3. Flags used (is `-i` or `--in-place` present?)
+4. Output redirection (is `>` or `| tee` present?)
+
+## Architecture
+
 ```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `path` | string | Target file or directory (required) |
-| `flags` | string[] | Simple flags like `-l`, `-a` |
-| `flagArgs` | object | Flags with arguments like `{"-n": "10"}` |
-| `pattern` | string | Search/transform pattern (grep, sed, awk) |
-
-## Extending
-
-To add a new command skill:
-
-1. Create a directory: `bash-skills/.AchillesSkills/mycommand-skill/`
-2. Add `cgskill.md` with skill definition
-3. Add `mycommand-skill.mjs` with implementation
-4. Use shared utilities from `_shared/`
-
-### Template
-
-```javascript
-import { validatePath, validateFlags, parseInput } from '../_shared/validation.mjs';
-import { executeWithPermission, buildArgs } from '../_shared/executor.mjs';
-
-const ALLOWED_FLAGS = ['-flag1', '-flag2'];
-
-export async function action(agent, prompt) {
-    const { path, flags = [] } = parseInput(prompt);
-
-    const pathCheck = validatePath(path);
-    if (!pathCheck.valid) return `Error: ${pathCheck.error}`;
-
-    const flagCheck = validateFlags(flags, ALLOWED_FLAGS);
-    if (!flagCheck.valid) return `Error: ${flagCheck.error}`;
-
-    const args = buildArgs(flags, {}, pathCheck.path);
-    const context = agent?.context || {};
-    const result = await executeWithPermission('mycommand', args, agent, { context });
-
-    if (result.denied) return `Execution denied: ${result.error}`;
-    return result.success ? result.output : `Error: ${result.error}`;
-}
-
-export default action;
+bash-skills/.AchillesSkills/
+└── bash/
+    ├── cgskill.md           # Skill definition
+    ├── bash.mjs             # Entry point
+    ├── parser.mjs           # Command line tokenizer
+    ├── riskClassifier.mjs   # Risk tier classification
+    └── permissions.mjs      # Tiered permission system
 ```
 
 ## License
