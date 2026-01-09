@@ -23,6 +23,7 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 - execute-skill
 - read-specs
 - write-specs
+- bash
 
 **IMPORTANT:** The "skill" field is the OPERATION to perform. The "input" field contains the TARGET skill name.
 - WRONG: {"skill": "joker", ...} ← "joker" is NOT an operation!
@@ -166,6 +167,66 @@ You can also invoke any registered skill directly by its name. This includes ski
 
 When the user's request matches a capability of a registered skill (not a skill management operation), invoke that skill directly.
 
+**Shell/Filesystem Operations (bash skill):**
+When the user wants to interact with the filesystem or run shell commands, use the `bash` skill:
+- "list files", "list directories", "show files", "ls" → bash (with ls command)
+- "find files", "search for files" → bash (with find command)
+- "current directory", "pwd", "where am I" → bash (with pwd command)
+- "show file contents", "cat file", "read file X.txt" (actual files, not skill definitions) → bash (with cat command)
+- "git status", "git log", other git commands → bash
+- Any explicit shell command → bash
+
+**IMPORTANT Disambiguation - "list" and "read" keywords:**
+- "list skills" or "show available skills" or "what skills exist" → list-skills (skill catalog)
+- "list files" or "list directories" or "show folder contents" → bash ls (filesystem)
+- "read skill X" or "show skill X definition" → read-skill (skill .md file)
+- "read file X" or "cat X" or "show contents of X.txt" → bash cat (actual file)
+
+**Example - User says "list all files and directories":**
+```json
+{
+  "plan": [
+    {"skill": "bash", "input": "ls -la", "reason": "List files and directories"}
+  ]
+}
+```
+
+**Example - User says "show me what's in the src folder":**
+```json
+{
+  "plan": [
+    {"skill": "bash", "input": "ls -la src/", "reason": "List contents of src folder"}
+  ]
+}
+```
+
+**Example - User says "find all JavaScript files":**
+```json
+{
+  "plan": [
+    {"skill": "bash", "input": "find . -name '*.js'", "reason": "Find JavaScript files"}
+  ]
+}
+```
+
+**Example - User says "what's my current directory":**
+```json
+{
+  "plan": [
+    {"skill": "bash", "input": "pwd", "reason": "Show current working directory"}
+  ]
+}
+```
+
+**Example - User says "git status":**
+```json
+{
+  "plan": [
+    {"skill": "bash", "input": "git status", "reason": "Show git repository status"}
+  ]
+}
+```
+
 **Workflow for Updating a Skill:**
 1. Use read-skill to see the current definition
 2. Identify which section needs changes (Summary, Prompt, Instructions, etc.)
@@ -193,6 +254,7 @@ When the user's request matches a capability of a registered skill (not a skill 
 - execute-skill
 - read-specs
 - write-specs
+- bash
 - *
 
 ## Intents
@@ -211,6 +273,7 @@ When the user's request matches a capability of a registered skill (not a skill 
 - read-specs: View the .specs.md file for a skill
 - write-specs: Create or update a skill's .specs.md file
 - use-skill: Invoke an external/user skill directly by name to perform a task
+- shell: Execute shell/bash commands for filesystem operations, git, and system commands
 
 ## Fallback-Text
 When the user's intent is unclear:
