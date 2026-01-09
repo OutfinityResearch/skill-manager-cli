@@ -83,6 +83,35 @@ SKIP_BASH_PERMISSIONS=true skill-manager
 /add-repo ./bash-skills --editable
 ```
 
+## Glob Pattern Support
+
+Shell glob patterns are automatically expanded before command execution:
+
+| Pattern | Matches |
+|---------|---------|
+| `*` | Any characters in filename |
+| `?` | Single character |
+| `[abc]` | Character class |
+| `*/` | Directories only |
+| `*.js` | Files ending in .js |
+
+### Examples
+```bash
+# List all directories
+bash ls -d */
+
+# List all JavaScript files
+bash ls *.js
+
+# Count lines in all markdown files
+bash wc -l *.md
+
+# Find all test files
+bash ls test*.js
+```
+
+Note: Glob expansion is done by Node.js (not the shell) for security, so some advanced patterns like `**` (recursive) have limited support.
+
 ## Usage Examples
 
 ### Via Natural Language
@@ -92,12 +121,16 @@ SKIP_BASH_PERMISSIONS=true skill-manager
 > bash find . -name "*.js"
 > bash cat package.json
 > bash head -n 20 log.txt
+> bash ls -d */
 ```
 
 ### Via Direct Skill Execution
 ```bash
 # List directory
 /exec bash "ls -la /tmp"
+
+# List all directories
+/exec bash "ls -d */"
 
 # Search for pattern
 /exec bash "grep -rn 'function' src/"
@@ -145,6 +178,7 @@ bash-skills/.AchillesSkills/
     ├── cgskill.md           # Skill definition
     ├── bash.mjs             # Entry point
     ├── parser.mjs           # Command line tokenizer
+    ├── globExpander.mjs     # Glob pattern expansion
     ├── riskClassifier.mjs   # Risk tier classification
     └── permissions.mjs      # Tiered permission system
 ```

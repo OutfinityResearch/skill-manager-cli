@@ -55,6 +55,9 @@ export class REPLSession {
         // Repository manager for external skills
         this.repoManager = options.repoManager || null;
 
+        // Skip bash permissions flag
+        this.skipBashPermissions = options.skipBashPermissions || false;
+
         // Context for skill execution
         this.context = {
             workingDir: this.workingDir,
@@ -63,7 +66,11 @@ export class REPLSession {
             llmAgent: agent.llmAgent,
             logger: agent.logger,
             repoManager: this.repoManager,
+            skipBashPermissions: this.skipBashPermissions,
         };
+
+        // Attach context directly to agent for skills that access agent.context
+        agent.context = this.context;
 
         // Create slash command handler with callbacks
         this.slashHandler = new SlashCommandHandler({

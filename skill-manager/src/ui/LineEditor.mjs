@@ -3,14 +3,16 @@
  *
  * Provides Unix-like terminal navigation including:
  * - Left/Right arrow cursor movement
- * - Ctrl+Left/Right or Alt+Left/Right word navigation
- * - Ctrl+Backspace or Alt+Backspace word deletion backward
- * - Ctrl+Delete or Alt+Delete word deletion forward
+ * - Ctrl+Left/Right, Alt+Left/Right, or Ctrl+Alt+Left/Right word navigation
+ * - Ctrl+Backspace, Alt+Backspace, or Ctrl+Alt+Backspace word deletion backward
+ * - Ctrl+Delete, Alt+Delete, or Ctrl+Alt+Delete word deletion forward
  * - Ctrl+A/E and Home/End for line start/end
  * - Ctrl+U to clear line
  * - Ctrl+K to kill to end of line
  * - Ctrl+Insert or Ctrl+Shift+C to copy line to clipboard
  * - Shift+Insert or Ctrl+Shift+V to paste from clipboard
+ *
+ * Note: Ctrl+Alt combinations behave identically to Ctrl-only combinations.
  *
  * @module ui/LineEditor
  */
@@ -25,18 +27,35 @@ const ANSI = {
 };
 
 // Key code constants - some keys have multiple codes depending on terminal
+// Modifier codes in ANSI sequences: 2=Shift, 3=Alt, 5=Ctrl, 6=Ctrl+Shift, 7=Ctrl+Alt, 8=Ctrl+Alt+Shift
 const KEYS = {
     // Arrow keys
     LEFT: '\x1b[D',
     RIGHT: '\x1b[C',
 
-    // Ctrl/Alt+Arrow for word navigation
-    WORD_LEFT: ['\x1b[1;5D', '\x1b[5D', '\x1b[1;3D', '\x1bb'],  // Ctrl+Left and Alt+Left
-    WORD_RIGHT: ['\x1b[1;5C', '\x1b[5C', '\x1b[1;3C', '\x1bf'],  // Ctrl+Right and Alt+Right
+    // Ctrl/Alt/Ctrl+Alt+Arrow for word navigation
+    WORD_LEFT: [
+        '\x1b[1;5D', '\x1b[5D',   // Ctrl+Left
+        '\x1b[1;3D', '\x1bb',     // Alt+Left
+        '\x1b[1;7D',              // Ctrl+Alt+Left
+    ],
+    WORD_RIGHT: [
+        '\x1b[1;5C', '\x1b[5C',   // Ctrl+Right
+        '\x1b[1;3C', '\x1bf',     // Alt+Right
+        '\x1b[1;7C',              // Ctrl+Alt+Right
+    ],
 
-    // Word deletion (Ctrl/Alt+Backspace and Ctrl/Alt+Delete)
-    WORD_BACKSPACE: ['\x08', '\x1b\x7f', '\x17', '\x1f'],  // Ctrl+BS, Alt+BS (ESC+DEL), Ctrl+W, Ctrl+_
-    WORD_DELETE: ['\x1b[3;5~', '\x1b[3;3~', '\x1bd'],  // Ctrl+Del and Alt+Del
+    // Word deletion (Ctrl/Alt/Ctrl+Alt+Backspace and Delete)
+    WORD_BACKSPACE: [
+        '\x08', '\x17', '\x1f',   // Ctrl+BS, Ctrl+W, Ctrl+_
+        '\x1b\x7f',               // Alt+BS (ESC+DEL)
+        '\x1b\x08',               // Ctrl+Alt+BS (ESC+Ctrl+BS)
+    ],
+    WORD_DELETE: [
+        '\x1b[3;5~',              // Ctrl+Del
+        '\x1b[3;3~', '\x1bd',     // Alt+Del
+        '\x1b[3;7~',              // Ctrl+Alt+Del
+    ],
 
     // Line operations
     CTRL_U: '\x15',
@@ -387,28 +406,29 @@ export class LineEditor {
      * Simple render without box
      */
     _renderSimple() {
-        // Move to start of line, clear to end
-        this.stream.write('\r' + ANSI.CLEAR_TO_END);
+        const visiblePromptLen = this.prompt.replace(/\x1b\[[0-9;]*m/g, '').length;
 
-        // Write prompt + buffer
-        this.stream.write(this.prompt + this.buffer);
+        // Build output in a single string to avoid flickering
+        let output = '\r' + ANSI.CLEAR_TO_END;
+        output += this.prompt + this.buffer;
 
         // If there's a right hint, display it
         if (this.rightHint) {
             const cols = process.stdout.columns || 80;
-            const visiblePromptLen = this.prompt.replace(/\x1b\[[0-9;]*m/g, '').length;
             const contentLen = visiblePromptLen + this.buffer.length;
             const hintLen = this.rightHint.replace(/\x1b\[[0-9;]*m/g, '').length;
 
             if (contentLen + hintLen + 2 < cols) {
-                this.stream.write(ANSI.MOVE_TO_COL(cols - hintLen));
-                this.stream.write(this.rightHint);
+                output += ANSI.MOVE_TO_COL(cols - hintLen);
+                output += this.rightHint;
             }
         }
 
-        const visiblePromptLen = this.prompt.replace(/\x1b\[[0-9;]*m/g, '').length;
         const cursorColumn = visiblePromptLen + this.cursorPos + 1;
-        this.stream.write(ANSI.MOVE_TO_COL(cursorColumn));
+        output += ANSI.MOVE_TO_COL(cursorColumn);
+
+        // Single write to avoid flickering
+        this.stream.write(output);
     }
 
     /**
@@ -443,32 +463,38 @@ export class LineEditor {
         // Build padded content - content fills remaining space before hint
         const paddedBuffer = displayBuffer.padEnd(contentAreaWidth);
 
+        // Build output in a single string to avoid flickering
+        let output = '';
+
         if (!this.boxDrawn) {
             // First render: draw complete box (3 lines)
-            this.stream.write(`\n${gray}${topLeft}${horizontalLine}${topRight}${reset}\n`);
-            this.stream.write(`${gray}${vertical}${reset} `);
-            this.stream.write(this.prompt);
-            this.stream.write(paddedBuffer);
-            this.stream.write(this.rightHint);
-            this.stream.write(` ${gray}${vertical}${reset}\n`);
-            this.stream.write(`${gray}${bottomLeft}${horizontalLine}${bottomRight}${reset}`);
+            output += `\n${gray}${topLeft}${horizontalLine}${topRight}${reset}\n`;
+            output += `${gray}${vertical}${reset} `;
+            output += this.prompt;
+            output += paddedBuffer;
+            output += this.rightHint;
+            output += ` ${gray}${vertical}${reset}\n`;
+            output += `${gray}${bottomLeft}${horizontalLine}${bottomRight}${reset}`;
             // Move cursor back up to content line
-            this.stream.write('\x1b[1A'); // Move up from bottom to content line
+            output += '\x1b[1A'; // Move up from bottom to content line
             this.boxDrawn = true;
         } else {
             // Subsequent renders: cursor is on content line, just redraw it
-            this.stream.write('\r' + ANSI.CLEAR_TO_END);
-            this.stream.write(`${gray}${vertical}${reset} `);
-            this.stream.write(this.prompt);
-            this.stream.write(paddedBuffer);
-            this.stream.write(this.rightHint);
-            this.stream.write(` ${gray}${vertical}${reset}`);
+            output += '\r' + ANSI.CLEAR_TO_END;
+            output += `${gray}${vertical}${reset} `;
+            output += this.prompt;
+            output += paddedBuffer;
+            output += this.rightHint;
+            output += ` ${gray}${vertical}${reset}`;
         }
 
         // Position cursor within the content line
         const cursorInBuffer = this.cursorPos - bufferOffset;
         const cursorColumn = 2 + visiblePromptLen + cursorInBuffer + 1;
-        this.stream.write(ANSI.MOVE_TO_COL(cursorColumn));
+        output += ANSI.MOVE_TO_COL(cursorColumn);
+
+        // Single write to avoid flickering
+        this.stream.write(output);
     }
 
     /**

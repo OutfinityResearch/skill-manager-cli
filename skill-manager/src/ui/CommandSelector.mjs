@@ -191,35 +191,41 @@ export async function showCommandSelector(commands, options = {}) {
         process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
-            if (maxRenderedLines === 0) return;
+            if (maxRenderedLines === 0) return '';
 
+            // Build clear sequence as single string to avoid flickering
+            let output = '';
             // We're at the prompt line - move down to clear all previously rendered content
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
+                output += `\n${TERMINAL.CLEAR_LINE}`;
             }
             // Move back up to prompt line
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
             // Clear prompt line
-            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
+            output += `\r${TERMINAL.CLEAR_LINE}`;
+            return output;
         };
 
         const render = () => {
+            // Build entire output as single string to avoid flickering
+            let output = '';
+
             // Clear all previously rendered content
-            clearDisplay();
+            output += clearDisplay();
 
             // Render prompt with current filter (Claude Code style: "> /filter")
-            process.stdout.write(`${prompt}${currentInput}`);
+            output += `${prompt}${currentInput}`;
 
             // Horizontal separator line
             const cols = process.stdout.columns || 80;
-            process.stdout.write(`\n${colors.gray}${'─'.repeat(cols)}${colors.reset}`);
+            output += `\n${colors.gray}${'─'.repeat(cols)}${colors.reset}`;
 
             // Render command list below
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
+                output += `\n${TERMINAL.CLEAR_LINE}${line}`;
             });
 
             // Track max lines for future clearing (include separator line)
@@ -230,15 +236,18 @@ export async function showCommandSelector(commands, options = {}) {
 
             // Move cursor back to input line
             for (let i = 0; i < totalLines; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
             // Position cursor at end of input
-            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(visiblePromptLen + currentInput.length + 1)}`);
+            output += `\r${TERMINAL.MOVE_TO_COL(visiblePromptLen + currentInput.length + 1)}`;
+
+            // Single write to avoid flickering
+            process.stdout.write(output);
         };
 
         const cleanup = () => {
-            clearDisplay();
-            process.stdout.write(TERMINAL.SHOW_CURSOR);
+            // Batch the clear and cursor show in a single write
+            process.stdout.write(clearDisplay() + TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -396,25 +405,29 @@ export async function showSkillSelector(skills, options = {}) {
         process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
-            if (maxRenderedLines === 0) return;
+            if (maxRenderedLines === 0) return '';
 
+            // Build clear sequence as single string to avoid flickering
+            let output = '';
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
+                output += `\n${TERMINAL.CLEAR_LINE}`;
             }
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
+            output += `\r${TERMINAL.CLEAR_LINE}`;
+            return output;
         };
 
         const render = () => {
-            clearDisplay();
+            // Build entire output as single string to avoid flickering
+            let output = clearDisplay();
 
-            process.stdout.write(`${prompt}${currentInput}`);
+            output += `${prompt}${currentInput}`;
 
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
+                output += `\n${TERMINAL.CLEAR_LINE}${line}`;
             });
 
             if (lines.length > maxRenderedLines) {
@@ -422,14 +435,17 @@ export async function showSkillSelector(skills, options = {}) {
             }
 
             for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            output += `\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`;
+
+            // Single write to avoid flickering
+            process.stdout.write(output);
         };
 
         const cleanup = () => {
-            clearDisplay();
-            process.stdout.write(TERMINAL.SHOW_CURSOR);
+            // Batch the clear and cursor show in a single write
+            process.stdout.write(clearDisplay() + TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -539,25 +555,29 @@ export async function showTestSelector(tests, options = {}) {
         process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
-            if (maxRenderedLines === 0) return;
+            if (maxRenderedLines === 0) return '';
 
+            // Build clear sequence as single string to avoid flickering
+            let output = '';
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
+                output += `\n${TERMINAL.CLEAR_LINE}`;
             }
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
+            output += `\r${TERMINAL.CLEAR_LINE}`;
+            return output;
         };
 
         const render = () => {
-            clearDisplay();
+            // Build entire output as single string to avoid flickering
+            let output = clearDisplay();
 
-            process.stdout.write(`${prompt}${currentInput}`);
+            output += `${prompt}${currentInput}`;
 
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
+                output += `\n${TERMINAL.CLEAR_LINE}${line}`;
             });
 
             if (lines.length > maxRenderedLines) {
@@ -565,14 +585,17 @@ export async function showTestSelector(tests, options = {}) {
             }
 
             for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            output += `\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`;
+
+            // Single write to avoid flickering
+            process.stdout.write(output);
         };
 
         const cleanup = () => {
-            clearDisplay();
-            process.stdout.write(TERMINAL.SHOW_CURSOR);
+            // Batch the clear and cursor show in a single write
+            process.stdout.write(clearDisplay() + TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -700,25 +723,29 @@ export async function showHelpSelector(topics, options = {}) {
         process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
-            if (maxRenderedLines === 0) return;
+            if (maxRenderedLines === 0) return '';
 
+            // Build clear sequence as single string to avoid flickering
+            let output = '';
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
+                output += `\n${TERMINAL.CLEAR_LINE}`;
             }
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
+            output += `\r${TERMINAL.CLEAR_LINE}`;
+            return output;
         };
 
         const render = () => {
-            clearDisplay();
+            // Build entire output as single string to avoid flickering
+            let output = clearDisplay();
 
-            process.stdout.write(`${prompt}${currentInput}`);
+            output += `${prompt}${currentInput}`;
 
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
+                output += `\n${TERMINAL.CLEAR_LINE}${line}`;
             });
 
             if (lines.length > maxRenderedLines) {
@@ -726,14 +753,17 @@ export async function showHelpSelector(topics, options = {}) {
             }
 
             for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            output += `\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`;
+
+            // Single write to avoid flickering
+            process.stdout.write(output);
         };
 
         const cleanup = () => {
-            clearDisplay();
-            process.stdout.write(TERMINAL.SHOW_CURSOR);
+            // Batch the clear and cursor show in a single write
+            process.stdout.write(clearDisplay() + TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };
@@ -861,25 +891,29 @@ export async function showRepoSelector(repos, options = {}) {
         process.stdout.write(TERMINAL.HIDE_CURSOR);
 
         const clearDisplay = () => {
-            if (maxRenderedLines === 0) return;
+            if (maxRenderedLines === 0) return '';
 
+            // Build clear sequence as single string to avoid flickering
+            let output = '';
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}`);
+                output += `\n${TERMINAL.CLEAR_LINE}`;
             }
             for (let i = 0; i < maxRenderedLines; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.CLEAR_LINE}`);
+            output += `\r${TERMINAL.CLEAR_LINE}`;
+            return output;
         };
 
         const render = () => {
-            clearDisplay();
+            // Build entire output as single string to avoid flickering
+            let output = clearDisplay();
 
-            process.stdout.write(`${prompt}${currentInput}`);
+            output += `${prompt}${currentInput}`;
 
             const lines = selector.render();
             lines.forEach(line => {
-                process.stdout.write(`\n${TERMINAL.CLEAR_LINE}${line}`);
+                output += `\n${TERMINAL.CLEAR_LINE}${line}`;
             });
 
             if (lines.length > maxRenderedLines) {
@@ -887,14 +921,17 @@ export async function showRepoSelector(repos, options = {}) {
             }
 
             for (let i = 0; i < lines.length; i++) {
-                process.stdout.write(TERMINAL.MOVE_UP);
+                output += TERMINAL.MOVE_UP;
             }
-            process.stdout.write(`\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`);
+            output += `\r${TERMINAL.MOVE_TO_COL(prompt.length + currentInput.length + 1)}`;
+
+            // Single write to avoid flickering
+            process.stdout.write(output);
         };
 
         const cleanup = () => {
-            clearDisplay();
-            process.stdout.write(TERMINAL.SHOW_CURSOR);
+            // Batch the clear and cursor show in a single write
+            process.stdout.write(clearDisplay() + TERMINAL.SHOW_CURSOR);
             process.stdin.setRawMode(false);
             process.stdin.removeListener('data', handleKey);
         };

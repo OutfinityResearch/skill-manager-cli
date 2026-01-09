@@ -67,6 +67,7 @@ async function main() {
     let mode = 'deep';
     let renderMarkdown = true;
     let uiStyle = process.env.SKILL_MANAGER_UI || 'claude-code'; // Default UI style
+    let skipBashPermissions = false; // Skip bash command permission prompts
     const cliSkillRoots = []; // Skill roots from --skill-root flags
 
     for (let i = 0; i < args.length; i++) {
@@ -110,6 +111,8 @@ async function main() {
         } else if (arg === '--version') {
             console.log('skill-manager v3.0.0');
             process.exit(0);
+        } else if (arg === '--skip-permissions') {
+            skipBashPermissions = true;
         } else if (!arg.startsWith('-')) {
             // Collect remaining args as the prompt
             prompt = args.slice(i).join(' ');
@@ -191,7 +194,11 @@ async function main() {
                 llmAgent,
                 logger,
                 repoManager,
+                skipBashPermissions,
             };
+
+            // Attach context directly to agent for skills that access agent.context
+            agent.context = context;
 
             let result = await agent.executePrompt(prompt, {
                 skillName: BUILT_IN_SKILLS.ORCHESTRATOR,
@@ -241,6 +248,7 @@ async function main() {
             debug,
             renderMarkdown,
             repoManager,
+            skipBashPermissions,
         });
         await session.start();
     }
@@ -264,6 +272,7 @@ OPTIONS:
   --fast                 Use fast LLM mode (cheaper, quicker)
   --deep                 Use deep LLM mode (default, more capable)
   --no-markdown          Disable markdown rendering in output (use /raw to toggle)
+  --skip-permissions     Skip bash command permission prompts (use with caution)
   --ui <style>           UI style: claude-code (default), minimal
   --ui-minimal           Use minimal UI (no colors, simple prompts)
   --ui-claude-code       Use Claude Code style UI (boxed input, animations)
