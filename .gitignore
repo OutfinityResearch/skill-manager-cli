@@ -5,3 +5,4 @@ package-lock.json
 .skill-manager-history
 temp_*
 .history
+.idea

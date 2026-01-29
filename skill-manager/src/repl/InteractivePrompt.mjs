@@ -174,6 +174,8 @@ export class InteractivePrompt {
                     return;
                 }
 
+                // Disabled: slash menu on leading "/" interferes with input.
+                /*
                 // Handle "/" - show interactive selector (only when buffer is empty)
                 if (keyStr === '/' && editor.getBuffer() === '') {
                     if (showingSelector) return;
@@ -294,6 +296,7 @@ export class InteractivePrompt {
                     }
                     return;
                 }
+                */
 
                 // Handle Escape
                 if (keyStr === '\x1b') {
@@ -501,6 +504,8 @@ export class InteractivePrompt {
                     return;
                 }
 
+                // Disabled: space-triggered selector for slash commands.
+                /*
                 // Handle Space after command that needs skill arg or repo arg
                 if (keyStr === ' ') {
                     const cmdInfo = getCommandNeedingSkillArg();
@@ -515,6 +520,7 @@ export class InteractivePrompt {
                     }
                     // Fall through to LineEditor for regular space
                 }
+                */
 
                 // Delegate to LineEditor for cursor movement, editing, and character input
                 const action = editor.processKey(keyStr);
