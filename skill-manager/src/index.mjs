@@ -345,32 +345,29 @@ function isRunDirectly() {
 }
 
 function collectNodeModulesSkillRoots(workingDir, logger) {
-    const packagePath = path.join(workingDir, 'package.json');
-    if (!fs.existsSync(packagePath)) {
+    const nodeModulesDir = path.join(workingDir, 'node_modules');
+    if (!fs.existsSync(nodeModulesDir)) {
         return [];
     }
 
-    let packageJson = null;
+    let entries = [];
     try {
-        packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+        entries = fs.readdirSync(nodeModulesDir, { withFileTypes: true });
     } catch (error) {
-        logger?.warn?.(`Failed to read package.json: ${error.message}`);
-        return [];
-    }
-
-    const dependencyNames = new Set([
-        ...Object.keys(packageJson.dependencies || {}),
-        ...Object.keys(packageJson.optionalDependencies || {}),
-        ...Object.keys(packageJson.devDependencies || {}),
-    ]);
-
-    if (dependencyNames.size === 0) {
+        logger?.warn?.(`Failed to read node_modules: ${error.message}`);
         return [];
     }
 
     const roots = [];
-    for (const name of dependencyNames) {
-        const skillRoot = path.join(workingDir, 'node_modules', name, '.AchillesSkills');
+    for (const entry of entries) {
+        if (!entry.isDirectory()) {
+            continue;
+        }
+        if (entry.name.startsWith('@')) {
+            continue;
+        }
+
+        const skillRoot = path.join(nodeModulesDir, entry.name, '.AchillesSkills');
         if (fs.existsSync(skillRoot)) {
             roots.push(skillRoot);
         }
