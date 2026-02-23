@@ -13,14 +13,6 @@ This module generates JavaScript code from skill definitions (tskill, iskill, os
 - oskill: Orchestrator skills → skillname.generated.mjs
 - cskill: Code skills → skillname.generated.mjs
 
-## Editability Check
-
-Only editable skills can have code generated:
-- Local skills (in working directory)
-- Skills from repos marked as editable
-
-Non-editable skills return error with hint to enable editing.
-
 ## Exported Function
 
 ### action
@@ -55,17 +47,16 @@ Skipped when generated file is up to date with all sources.
 
 1. Parse skill name from input
 2. Find skill file using agent's findSkillFile method
-3. Check skill is editable
-4. Read skill definition content
-5. Verify skill type is supported
-6. Check if regeneration is needed
-7. Parse skill sections for context
-8. Load specs content if available
-9. Build type-specific code generation prompt
-10. Call LLM with prompt (mode: deep, shape: code)
-11. Clean response (remove markdown blocks)
-12. Write generated file to skill directory
-13. Auto-run tests if found
+3. Read skill definition content
+4. Verify skill type is supported
+5. Check if regeneration is needed
+6. Parse skill sections for context
+7. Load specs content if available
+8. Build type-specific code generation prompt
+9. Call LLM with prompt (mode: deep, shape: code)
+10. Clean response (remove markdown blocks)
+11. Write generated file to skill directory
+12. Auto-run tests if found
 
 ## Output File Paths
 
@@ -108,13 +99,6 @@ Error: skillName is required. Usage: generate-code <skillName>
 Skill not found:
 ```
 Error: Skill "name" not found
-```
-
-Non-editable skill:
-```
-Error: Cannot generate code for skill "name" - it belongs to read-only repository "reponame".
-
-To enable editing, run: /edit-repo reponame
 ```
 
 Unsupported type:

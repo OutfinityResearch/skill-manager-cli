@@ -145,7 +145,7 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 ```
 
 **Direct Skill Invocation (External/User Skills):**
-You can also invoke any registered skill directly by its name. This includes skills from external repositories added via /add-repo.
+You can also invoke any registered skill directly by its name. This includes skills installed via npm and discovered in node_modules.
 
 **Example - User says "reverse hello" (and shared-utility skill is available):**
 ```json

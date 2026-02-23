@@ -69,7 +69,7 @@ export class EnvironmentConfigurationError extends ConfigurationError {
 }
 
 /**
- * Config file error (e.g., .skill-manager.json issues).
+ * Config file error.
  */
 export class ConfigFileError extends ConfigurationError {
     /**

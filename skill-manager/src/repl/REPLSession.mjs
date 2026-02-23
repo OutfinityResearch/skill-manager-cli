@@ -34,7 +34,6 @@ export class REPLSession {
      * @param {string} [options.skillsDir] - Skills directory path (defaults to workingDir/.AchillesSkills)
      * @param {string} [options.builtInSkillsDir] - Built-in skills directory (for filtering user skills)
      * @param {HistoryManager} [options.historyManager] - Command history manager (created if not provided)
-     * @param {RepoManager} [options.repoManager] - Repository manager for external skill repos
      * @param {boolean} [options.debug] - Enable debug mode
      */
     constructor(agent, options = {}) {
@@ -52,9 +51,6 @@ export class REPLSession {
             workingDir: this.workingDir,
         });
 
-        // Repository manager for external skills
-        this.repoManager = options.repoManager || null;
-
         // Skip bash permissions flag
         this.skipBashPermissions = options.skipBashPermissions || false;
 
@@ -65,7 +61,6 @@ export class REPLSession {
             skilledAgent: agent,
             llmAgent: agent.llmAgent,
             logger: agent.logger,
-            repoManager: this.repoManager,
             skipBashPermissions: this.skipBashPermissions,
         };
 
@@ -77,7 +72,6 @@ export class REPLSession {
             executeSkill: (skillName, input, opts) => this._executeSkill(skillName, input, opts),
             getUserSkills: () => this.getUserSkills(),
             getSkills: () => agent.getSkills(),
-            getRepositories: () => this.repoManager?.listRepositories() || [],
         });
 
         // Build command list for interactive selector
@@ -92,7 +86,6 @@ export class REPLSession {
             slashHandler: this.slashHandler,
             commandList: this.commandList,
             getUserSkills: () => this.getUserSkills(),
-            getRepositories: () => this.repoManager?.listRepositories() || [],
         });
 
         this.quickCommands = new QuickCommands({
@@ -116,6 +109,7 @@ export class REPLSession {
      * @private
      */
     async _executeSkill(skillName, input, opts = {}) {
+        this._logEnvSnapshot(`execute-skill:${skillName}`);
         return this.agent.executePrompt(input, {
             skillName,
             context: this.context,
@@ -147,6 +141,7 @@ export class REPLSession {
     async processPrompt(userPrompt, opts = {}) {
         const { skillName = BUILT_IN_SKILLS.ORCHESTRATOR, ...restOptions } = opts;
 
+        this._logEnvSnapshot(`process-prompt:${skillName}`);
         let result = await this.agent.executePrompt(userPrompt, {
             skillName,
             context: this.context,
@@ -264,6 +259,40 @@ export class REPLSession {
         console.log('');
         console.log(`  ${style('Type "/" for commands, or describe what you need', 'dim')}`);
         console.log('');
+    }
+
+    _logEnvSnapshot(reason) {
+        const prefixes = [
+            'ACHILLES_',
+            'LLM_',
+            'OPENAI_',
+            'OPENROUTER_',
+            'ANTHROPIC_',
+            'GEMINI_',
+            'XAI_',
+            'MISTRAL_',
+            'HUGGINGFACE_',
+            'OPENCODE_',
+            'AXIOLOGIC_',
+        ];
+
+        const isSensitive = (key) => /KEY|TOKEN|SECRET|PASSWORD/i.test(key);
+        const entries = Object.entries(process.env)
+            .filter(([key]) => prefixes.some((prefix) => key.startsWith(prefix)))
+            .sort(([a], [b]) => a.localeCompare(b));
+
+        console.info(`[SkillManager] Env snapshot (${reason})`);
+        if (!entries.length) {
+            console.info('[SkillManager]   (no matching env vars found)');
+            return;
+        }
+
+        for (const [key, value] of entries) {
+            const displayValue = isSensitive(key)
+                ? (value ? '[set]' : '')
+                : (value ?? '');
+            console.info(`[SkillManager]   ${key}=${displayValue}`);
+        }
     }
 
     /**

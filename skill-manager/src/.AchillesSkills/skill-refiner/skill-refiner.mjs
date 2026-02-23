@@ -4,9 +4,7 @@
  * Uses LoopAgentSession for intelligent, LLM-driven refinement loop.
  * The agent decides when to read, generate, test, evaluate, and fix.
  *
- * Only refines skills that are editable:
- * - Local skills (in working directory's .AchillesSkills)
- * - Skills from external repos marked as editable
+ * Refines skill definitions using an iterative loop.
  */
 
 import fs from 'node:fs';
@@ -16,17 +14,6 @@ import { detectSkillType, loadSpecsContent } from '../../schemas/skillSchemas.mj
 import { buildSystemPrompt, buildEvaluationPrompt } from './skillRefiner.prompts.mjs';
 import { runTestFile } from '../../lib/testDiscovery.mjs';
 import { formatTestResult } from '../../ui/TestResultFormatter.mjs';
-
-/**
- * Check if a skill is editable (local or from editable repo).
- */
-function isSkillEditable(skillDir, repoManager) {
-    if (!repoManager || !skillDir) {
-        return { editable: true, repoName: null };
-    }
-    const repoInfo = repoManager.getSkillRepoInfo(skillDir);
-    return { editable: repoInfo.editable, repoName: repoInfo.repoName };
-}
 
 /**
  * Parse input to extract skill name, requirements, and options
@@ -312,14 +299,6 @@ export async function action(recursiveSkilledAgent, prompt) {
     }
 
     const skillDir = skillInfo.record?.skillDir || path.dirname(skillInfo.filePath);
-
-    // Check if skill is editable
-    const repoManager = recursiveSkilledAgent?.repoManager;
-    const { editable, repoName } = isSkillEditable(skillDir, repoManager);
-
-    if (!editable) {
-        return `Error: Cannot refine skill "${skillName}" - it belongs to read-only repository "${repoName}".\n\nTo enable editing, run: /edit-repo ${repoName}`;
-    }
 
     const specsContent = loadSpecsContent(skillDir);
 

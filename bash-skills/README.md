@@ -75,13 +75,8 @@ SKIP_BASH_PERMISSIONS=true skill-manager
 
 ## Installation
 
-```bash
-# Add as a skill repository
-/add-repo ./bash-skills
-
-# Or with editing enabled
-/add-repo ./bash-skills --editable
-```
+The bash-skills are bundled and loaded automatically when the
+`bash-skills/.AchillesSkills` directory is present.
 
 ## Glob Pattern Support
 

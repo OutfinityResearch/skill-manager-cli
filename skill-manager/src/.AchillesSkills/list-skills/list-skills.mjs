@@ -1,26 +1,12 @@
 /**
  * List Skills - Returns all registered skills from the catalog
  *
- * By default, only shows skills that can be edited:
- * - Local skills (in working directory's .AchillesSkills)
- * - Skills from external repos marked as editable
+ * By default, only shows user skills (excludes built-in).
  *
- * Use "list all skills" to include built-in skills (but still excludes non-editable repo skills).
+ * Use "list all skills" to include built-in skills.
  */
 
 import { Sanitiser } from 'achillesAgentLib/utils/Sanitiser.mjs';
-
-/**
- * Check if a skill is editable (local or from editable repo).
- */
-function isSkillEditable(skillRecord, repoManager) {
-    if (!repoManager || !skillRecord?.skillDir) {
-        return true; // No repo manager means no external repos, all skills are editable
-    }
-
-    const repoInfo = repoManager.getSkillRepoInfo(skillRecord.skillDir);
-    return repoInfo.editable;
-}
 
 export async function action(recursiveSkilledAgent, prompt) {
     if (!recursiveSkilledAgent || typeof recursiveSkilledAgent.getSkills !== 'function') {
@@ -69,16 +55,10 @@ export async function action(recursiveSkilledAgent, prompt) {
             ? recursiveSkilledAgent.getUserSkills()
             : recursiveSkilledAgent.getSkills());
 
-    // Filter out non-editable external repo skills
-    const repoManager = recursiveSkilledAgent.repoManager;
-    if (repoManager) {
-        skills = skills.filter(s => isSkillEditable(s, repoManager));
-    }
-
     if (skills.length === 0) {
         return showAllSkills
-            ? 'No editable skills currently registered. Create one with write-skill or use get-template.'
-            : 'No editable user skills found. Create one with write-skill or use get-template.\n\nNote: Skills from read-only repos are hidden. Use /edit-repo <name> to enable editing.';
+            ? 'No skills currently registered. Create one with write-skill or use get-template.'
+            : 'No user skills found. Create one with write-skill or use get-template.';
     }
 
     // Apply filter if provided

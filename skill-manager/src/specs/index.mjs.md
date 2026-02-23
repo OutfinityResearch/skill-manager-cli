@@ -25,7 +25,6 @@ When imported, this module re-exports the following components:
 - Help printing utilities
 
 ### Utilities
-- RepoManager for external repository management
 - Built-in skills directory path
 - Built-in skill name constants
 
@@ -116,21 +115,18 @@ REPLSession receives:
 - Built-in skills directory path (for filtering user skills)
 - Debug mode flag
 - Markdown rendering flag
-- RepoManager instance
 
 ## Initialization Sequence
 
 1. Parse all command-line arguments
 2. Configure logger based on verbose flag
 3. Ensure user's .AchillesSkills directory exists (create if missing)
-4. Initialize RepoManager with working directory and global repos directory
-5. Get enabled skill roots from repository configuration
-6. Merge all skill roots: built-in skills, bash skills, CLI-specified roots, config-specified roots
-7. Initialize LLMAgent with name "skill-manager-agent"
-8. Initialize RecursiveSkilledAgent with LLM agent, working directory, and all skill roots
-9. Attach RepoManager to agent for editability checks
-10. Initialize UI provider based on selected style
-11. Branch to single-shot or REPL mode based on prompt presence
+4. Collect skill roots from node_modules packages with .AchillesSkills
+5. Merge all skill roots: built-in skills, bash skills, CLI-specified roots, node_modules roots
+6. Initialize LLMAgent with name "skill-manager-agent"
+7. Initialize RecursiveSkilledAgent with LLM agent, working directory, and all skill roots
+8. Initialize UI provider based on selected style
+9. Branch to single-shot or REPL mode based on prompt presence
 
 ## Skill Root Sources
 
@@ -138,7 +134,7 @@ Skills are discovered from multiple sources, merged in this order:
 1. Built-in skills bundled with the module (src/.AchillesSkills)
 2. Bash command skills (bash-skills/.AchillesSkills) if directory exists
 3. Skill roots specified via --skill-root CLI flags
-4. Skill roots from repository configuration file
+4. Skill roots from node_modules packages with .AchillesSkills
 
 ## Error Handling
 

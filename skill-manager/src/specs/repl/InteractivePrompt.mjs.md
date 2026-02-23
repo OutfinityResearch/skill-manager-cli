@@ -15,7 +15,6 @@ Accepts options object with:
 - slashHandler: SlashCommandHandler for command parsing
 - commandList: Array of available commands for selector
 - getUserSkills: Callback function returning array of user skills
-- getRepositories: Optional callback returning configured repositories
 
 Initialization:
 1. Store provided dependencies
@@ -55,17 +54,16 @@ Key handling:
 - Escape: Ignored (may be start of escape sequence)
 - Up arrow: Navigate to older history entry
 - Down arrow: Navigate to newer history entry
-- Tab: Trigger skill/repo selector if applicable command typed
-- Space after command: Trigger skill/repo selector if command needs argument
+- Tab: Trigger skill selector if applicable command typed
+- Space after command: Trigger skill selector if command needs argument
 - Other keys: Delegate to LineEditor
 
 Command selector flow:
 1. Exit raw mode
 2. Show command selector
 3. If command needs skill argument, show skill selector
-4. If command needs repo argument, show repo selector
-5. If command needs text arguments, show argument input prompt
-6. Otherwise execute command directly
+4. If command needs text arguments, show argument input prompt
+5. Otherwise execute command directly
 
 Cleanup on completion:
 1. Draw bottom border if boxed mode
@@ -78,7 +76,7 @@ Cleanup on completion:
 Handles argument input for commands requiring text arguments.
 
 Accepts:
-- commandName: The slash command name (e.g., "/add-repo")
+- commandName: The slash command name (e.g., "/write")
 - cmdDef: Command definition with usage and description
 - resolve: Promise resolve function
 - cleanup: Cleanup function
@@ -138,10 +136,6 @@ Processing:
 
 Commands triggering skill selector:
 - Commands with needsSkillArg flag (e.g., /read, /exec, /test)
-- Triggered by Tab or Space after command name
-
-Commands triggering repo selector:
-- Commands with needsRepoArg flag (e.g., /remove-repo, /update-repo)
 - Triggered by Tab or Space after command name
 
 Commands triggering argument prompt:

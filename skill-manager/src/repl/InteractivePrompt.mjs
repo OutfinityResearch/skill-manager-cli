@@ -6,7 +6,7 @@
 
 import readline from 'node:readline';
 import { LineEditor } from '../ui/LineEditor.mjs';
-import { showCommandSelector, showSkillSelector, showRepoSelector } from '../ui/CommandSelector.mjs';
+import { showCommandSelector, showSkillSelector } from '../ui/CommandSelector.mjs';
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
 import { UIContext } from '../ui/UIContext.mjs';
 
@@ -22,7 +22,6 @@ export class InteractivePrompt {
      * @param {SlashCommandHandler} options.slashHandler - Slash command handler
      * @param {Array} options.commandList - List of available commands
      * @param {Function} options.getUserSkills - Callback to get user skills
-     * @param {Function} [options.getRepositories] - Callback to get configured repositories
      * @param {string} [options.prompt='SkillManager> '] - Prompt string
      */
     constructor(options) {
@@ -30,7 +29,6 @@ export class InteractivePrompt {
         this.slashHandler = options.slashHandler;
         this.commandList = options.commandList;
         this.getUserSkills = options.getUserSkills;
-        this.getRepositories = options.getRepositories || (() => []);
 
         // Get colors from theme
         const theme = UIContext.getTheme();
@@ -247,7 +245,6 @@ export class InteractivePrompt {
                             if (repos.length === 0) {
                                 cleanup();
                                 process.stdout.write('\n');
-                                console.log(`${self.colors.yellow}No repositories configured. Use /add-repo to add one.${self.colors.reset}`);
                                 resolve(''); // Return empty to re-prompt
                                 return;
                             }
@@ -355,7 +352,7 @@ export class InteractivePrompt {
                     return null;
                 };
 
-                // Helper to check if buffer is a command needing text args (not skill args or repo args)
+                // Helper to check if buffer is a command needing text args (not skill args)
                 const getCommandNeedingTextArg = () => {
                     const buf = editor.getBuffer();
                     if (!buf.startsWith('/')) return null;
@@ -365,24 +362,8 @@ export class InteractivePrompt {
                     // Only trigger if no args yet (just the command)
                     if (args && args.trim()) return null;
                     const cmdDef = SlashCommandHandler.COMMANDS[command];
-                    // Command needs text args but not skill args or repo args
-                    if (cmdDef && cmdDef.args === 'required' && !cmdDef.needsSkillArg && !cmdDef.needsRepoArg) {
-                        return { command, cmdDef };
-                    }
-                    return null;
-                };
-
-                // Helper to check if buffer is a command needing repo arg
-                const getCommandNeedingRepoArg = () => {
-                    const buf = editor.getBuffer();
-                    if (!buf.startsWith('/')) return null;
-                    const parsed = self.slashHandler.parseSlashCommand(buf);
-                    if (!parsed) return null;
-                    const { command, args } = parsed;
-                    // Only trigger if no args yet (just the command)
-                    if (args && args.trim()) return null;
-                    const cmdDef = SlashCommandHandler.COMMANDS[command];
-                    if (cmdDef && cmdDef.needsRepoArg) {
+                    // Command needs text args but not skill args
+                    if (cmdDef && cmdDef.args === 'required' && !cmdDef.needsSkillArg) {
                         return { command, cmdDef };
                     }
                     return null;
@@ -437,61 +418,14 @@ export class InteractivePrompt {
                     }
                 };
 
-                // Helper to show repo selector for current command
-                const showRepoSelectorForCommand = async (command) => {
-                    if (showingSelector) return;
-                    showingSelector = true;
-
-                    process.stdin.removeListener('data', handleKey);
-                    process.stdin.setRawMode(false);
-
-                    // Clear the line and rewrite with space
-                    process.stdout.write(` `);
-
-                    const repos = self.getRepositories();
-                    if (repos.length === 0) {
-                        cleanup();
-                        process.stdout.write('\n');
-                        console.log(`${self.colors.yellow}No repositories configured. Use /add-repo to add one.${self.colors.reset}`);
-                        resolve(''); // Return empty to re-prompt
-                        return;
-                    }
-
-                    const selectedRepo = await showRepoSelector(repos, {
-                        prompt: `/${command} `,
-                        initialFilter: '',
-                    });
-
-                    if (selectedRepo) {
-                        // Execute immediately with repo name
-                        cleanup();
-                        const fullCommand = `/${command} ${selectedRepo.name}`;
-                        process.stdout.write(`${selectedRepo.name}\n`);
-                        resolve(fullCommand);
-                    } else {
-                        // User cancelled - return to boxed input
-                        showingSelector = false;
-                        editor.boxDrawn = false;
-                        editor.render();
-                        process.stdin.setRawMode(true);
-                        process.stdin.on('data', handleKey);
-                    }
-                };
-
-                // Handle Tab - show skill selector if command needs skill arg, repo selector if needs repo arg, or prompt for text args
+                // Handle Tab - show skill selector if command needs skill arg, or prompt for text args
                 if (keyStr === '\t') {
                     const cmdInfo = getCommandNeedingSkillArg();
                     if (cmdInfo) {
                         await showSkillSelectorForCommand(cmdInfo.command);
                         return;
                     }
-                    // Check if command needs repo arg
-                    const repoArgInfo = getCommandNeedingRepoArg();
-                    if (repoArgInfo) {
-                        await showRepoSelectorForCommand(repoArgInfo.command);
-                        return;
-                    }
-                    // Check if command needs text args (not skill args or repo args)
+                    // Check if command needs text args (not skill args)
                     const textArgInfo = getCommandNeedingTextArg();
                     if (textArgInfo) {
                         // Show argument input prompt
@@ -506,16 +440,11 @@ export class InteractivePrompt {
 
                 // Disabled: space-triggered selector for slash commands.
                 /*
-                // Handle Space after command that needs skill arg or repo arg
+                // Handle Space after command that needs skill arg
                 if (keyStr === ' ') {
                     const cmdInfo = getCommandNeedingSkillArg();
                     if (cmdInfo) {
                         await showSkillSelectorForCommand(cmdInfo.command);
-                        return;
-                    }
-                    const repoArgInfo = getCommandNeedingRepoArg();
-                    if (repoArgInfo) {
-                        await showRepoSelectorForCommand(repoArgInfo.command);
                         return;
                     }
                     // Fall through to LineEditor for regular space
@@ -545,7 +474,7 @@ export class InteractivePrompt {
     }
 
     /**
-     * Handle argument input flow when command requires text arguments (e.g., /add-repo)
+     * Handle argument input flow when command requires text arguments (e.g., /write)
      * @private
      */
     async _handleArgInputFlow(commandName, cmdDef, resolve, cleanup) {

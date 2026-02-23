@@ -2,7 +2,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { RecursiveSkilledAgent } from 'achillesAgentLib/RecursiveSkilledAgents';
@@ -13,7 +12,6 @@ import { SlashCommandHandler } from './repl/SlashCommandHandler.mjs';
 import { REPLSession } from './repl/REPLSession.mjs';
 import { summarizeResult, formatSlashResult } from './ui/ResultFormatter.mjs';
 import { printHelp as printREPLHelp, showHistory, searchHistory } from './ui/HelpPrinter.mjs';
-import { RepoManager } from './lib/RepoManager.mjs';
 import { UIContext } from './ui/UIContext.mjs';
 import { createProvider, getProviderNames } from './ui/providers/index.mjs';
 import { BUILT_IN_SKILLS } from './lib/constants.mjs';
@@ -43,7 +41,6 @@ export {
     // History
     HistoryManager,
     // Repository management
-    RepoManager,
     // Utilities
     summarizeResult,
     formatSlashResult,
@@ -134,22 +131,19 @@ async function main() {
         logger.log?.(`Created .AchillesSkills directory at ${skillsDir}`);
     }
 
-    // Initialize RepoManager for external skill repositories
-    const globalReposDir = path.join(os.homedir(), '.skill-manager', 'repos');
-    const repoManager = new RepoManager({ workingDir, globalReposDir, logger });
-    const configSkillRoots = repoManager.getEnabledSkillRoots();
+    const nodeModulesSkillRoots = collectNodeModulesSkillRoots(workingDir, logger);
 
-    // Merge all skill roots: built-in + bash-skills + CLI flags + config file repos
+    // Merge all skill roots: built-in + bash-skills + CLI flags + node_modules skills
     const allSkillRoots = [
         builtInSkillsDir,
         // Add bash-skills if the directory exists
         ...(fs.existsSync(bashSkillsDir) ? [bashSkillsDir] : []),
         ...cliSkillRoots,
-        ...configSkillRoots,
+        ...nodeModulesSkillRoots,
     ];
 
-    if (verbose && (cliSkillRoots.length > 0 || configSkillRoots.length > 0)) {
-        logger.log(`Additional skill roots: ${[...cliSkillRoots, ...configSkillRoots].join(', ')}`);
+    if (verbose && (cliSkillRoots.length > 0 || nodeModulesSkillRoots.length > 0)) {
+        logger.log(`Additional skill roots: ${[...cliSkillRoots, ...nodeModulesSkillRoots].join(', ')}`);
     }
 
     // Initialize LLM Agent
@@ -164,9 +158,6 @@ async function main() {
         additionalSkillRoots: allSkillRoots,
         logger,
     });
-
-    // Attach repoManager to agent so skills can access it for editability checks
-    agent.repoManager = repoManager;
 
     // Initialize UI provider based on selected style
     try {
@@ -193,7 +184,6 @@ async function main() {
                 skilledAgent: agent,
                 llmAgent,
                 logger,
-                repoManager,
                 skipBashPermissions,
             };
 
@@ -247,7 +237,6 @@ async function main() {
             builtInSkillsDir,
             debug,
             renderMarkdown,
-            repoManager,
             skipBashPermissions,
         });
         await session.start();
@@ -308,14 +297,10 @@ SKILL TYPES:
   oskill   Orchestrator (routes to other skills)
   mskill   MCP tool integration
 
-EXTERNAL REPOSITORIES:
-  Add external skill repositories via REPL commands:
-    /add-repo <git-url|path>   Add git repo or local path
-    /repos                     List configured repositories
-    /update-repo [name|all]    Update git repositories
-    /remove-repo <name>        Remove a repository
+EXTERNAL SKILLS:
+  Skills can be installed via npm and discovered in node_modules.
 
-  Or via CLI flags for session-only skill roots:
+  You can also add session-only skill roots:
     skill-manager -r /path/to/skills -r /another/path
 
 EXAMPLES:
@@ -357,6 +342,41 @@ function isRunDirectly() {
         // Fallback for edge cases
         return import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'));
     }
+}
+
+function collectNodeModulesSkillRoots(workingDir, logger) {
+    const packagePath = path.join(workingDir, 'package.json');
+    if (!fs.existsSync(packagePath)) {
+        return [];
+    }
+
+    let packageJson = null;
+    try {
+        packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+    } catch (error) {
+        logger?.warn?.(`Failed to read package.json: ${error.message}`);
+        return [];
+    }
+
+    const dependencyNames = new Set([
+        ...Object.keys(packageJson.dependencies || {}),
+        ...Object.keys(packageJson.optionalDependencies || {}),
+        ...Object.keys(packageJson.devDependencies || {}),
+    ]);
+
+    if (dependencyNames.size === 0) {
+        return [];
+    }
+
+    const roots = [];
+    for (const name of dependencyNames) {
+        const skillRoot = path.join(workingDir, 'node_modules', name, '.AchillesSkills');
+        if (fs.existsSync(skillRoot)) {
+            roots.push(skillRoot);
+        }
+    }
+
+    return roots;
 }
 
 // Run if executed directly

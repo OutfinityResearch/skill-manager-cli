@@ -45,7 +45,6 @@ This folder contains detailed design specifications for each module in the skill
 | File | Description |
 |------|-------------|
 | [lib/constants.mjs.md](./lib/constants.mjs.md) | Centralized constants registry |
-| [lib/RepoManager.mjs.md](./lib/RepoManager.mjs.md) | External skill repository management |
 | [lib/testDiscovery.mjs.md](./lib/testDiscovery.mjs.md) | Test discovery and execution |
 
 ## Document Format

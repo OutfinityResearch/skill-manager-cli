@@ -17,7 +17,6 @@ Accepts:
   - skillsDir: Skills directory path (defaults to workingDir/.AchillesSkills)
   - builtInSkillsDir: Path to built-in skills directory for filtering user skills
   - historyManager: Pre-configured HistoryManager instance
-  - repoManager: RepoManager instance for external skill repositories
   - debug: Enable debug mode showing full JSON output
   - renderMarkdown: Enable markdown rendering (default true)
 
@@ -40,7 +39,6 @@ The context object passed to skill executions contains:
 - skilledAgent: Reference to the RecursiveSkilledAgent
 - llmAgent: Reference to the LLM agent
 - logger: Reference to the logger
-- repoManager: Reference to the repository manager
 
 ## Public Methods
 

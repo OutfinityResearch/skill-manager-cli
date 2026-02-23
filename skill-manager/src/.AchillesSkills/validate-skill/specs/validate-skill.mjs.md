@@ -6,14 +6,6 @@ Validates a skill file against its schema.
 
 This module validates skill definition files against their type-specific schemas, checking for required sections, proper structure, and providing warnings for missing optional sections.
 
-## Editability Check
-
-Only editable skills can be validated:
-- Local skills (in working directory)
-- Skills from repos marked as editable
-
-Non-editable skills return error with hint to enable management.
-
 ## Exported Function
 
 ### action
@@ -34,10 +26,9 @@ Accepts:
 
 1. Parse skill name from input
 2. Find skill file using agent's findSkillFile method
-3. Check skill is editable
-4. Read skill definition content
-5. Call validateSkillContent from skillSchemas
-6. Format and return results
+3. Read skill definition content
+4. Call validateSkillContent from skillSchemas
+5. Format and return results
 
 ## Validation Checks
 
@@ -110,13 +101,6 @@ Error: skillName is required. Usage: validate-skill <skillName>
 Skill not found:
 ```
 Error: Skill "name" not found
-```
-
-Non-editable skill:
-```
-Error: Cannot validate skill "name" - it belongs to read-only repository "reponame".
-
-To enable management, run: /edit-repo reponame
 ```
 
 File read error:

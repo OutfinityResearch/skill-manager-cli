@@ -66,7 +66,7 @@ export class RepositoryNotFoundError extends ResourceError {
     constructor(repoName, availableRepos = [], options = {}) {
         const hint = availableRepos.length > 0
             ? `Available repositories: ${availableRepos.join(', ')}`
-            : 'Use /add-repo to add a repository';
+            : 'Install the repository package or check your configuration';
 
         super(`Repository "${repoName}" not found`, {
             code: ERROR_CODES.REPO_NOT_FOUND,

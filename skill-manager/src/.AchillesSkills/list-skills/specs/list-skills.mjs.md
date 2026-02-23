@@ -1,10 +1,10 @@
 # list-skills Module Specification
 
-Lists registered skills from the catalog with filtering and editability awareness.
+Lists registered skills from the catalog with filtering.
 
 ## Overview
 
-This module returns all registered skills that the user can edit. By default, it shows only user skills (excluding built-in skills) and filters out skills from non-editable external repositories.
+This module returns all registered skills. By default, it shows only user skills (excluding built-in skills).
 
 ## Exported Function
 
@@ -19,7 +19,7 @@ Accepts:
 ## Input Parsing
 
 The prompt can be:
-- Empty: List all editable user skills
+- Empty: List all user skills
 - String "all" or "list all skills": Include built-in skills
 - String with type name: Filter by skill type
 - Object with filter property: Filter by skill type
@@ -27,15 +27,6 @@ The prompt can be:
 Ignored patterns:
 - Common command phrases like "list skills", "show all skills"
 - Full command sentences with more than 3 words
-
-## Editability Check
-
-A skill is considered editable if:
-- No RepoManager is available (all skills editable)
-- Skill is local (not from external repository)
-- Skill's repository is marked as editable
-
-Non-editable skills are excluded from the listing.
 
 ## Output Format
 
@@ -65,8 +56,8 @@ Found N skill(s):
 ```
 
 No skills found:
-- If showing all: "No editable skills currently registered..."
-- If user only: "No editable user skills found..." with note about read-only repos
+- If showing all: "No skills currently registered..."
+- If user only: "No user skills found..."
 
 Filter mismatch:
 ```
@@ -81,4 +72,4 @@ Returns error message if no skill catalog is available.
 ## Dependencies
 
 - Sanitiser from achillesAgentLib for name normalization
-- RepoManager (optional) from agent for editability checks
+- None
