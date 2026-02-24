@@ -124,12 +124,8 @@ async function main() {
         error: (msg) => console.error(`[ERROR] ${msg}`),
     };
 
-    // Ensure user's .AchillesSkills directory exists
+    // User skills directory (do not create automatically)
     const skillsDir = path.join(workingDir, '.AchillesSkills');
-    if (!fs.existsSync(skillsDir)) {
-        fs.mkdirSync(skillsDir, { recursive: true });
-        logger.log?.(`Created .AchillesSkills directory at ${skillsDir}`);
-    }
 
     const nodeModulesSkillRoots = collectNodeModulesSkillRoots(__dirname, logger);
 

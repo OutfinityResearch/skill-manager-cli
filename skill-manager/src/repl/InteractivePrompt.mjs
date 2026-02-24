@@ -22,6 +22,7 @@ export class InteractivePrompt {
      * @param {SlashCommandHandler} options.slashHandler - Slash command handler
      * @param {Array} options.commandList - List of available commands
      * @param {Function} options.getUserSkills - Callback to get user skills
+     * @param {Function} [options.getAllSkills] - Callback to get all skills
      * @param {string} [options.prompt='SkillManager> '] - Prompt string
      */
     constructor(options) {
@@ -29,6 +30,7 @@ export class InteractivePrompt {
         this.slashHandler = options.slashHandler;
         this.commandList = options.commandList;
         this.getUserSkills = options.getUserSkills;
+        this.getAllSkills = options.getAllSkills || options.getUserSkills;
 
         // Get colors from theme
         const theme = UIContext.getTheme();
@@ -336,6 +338,54 @@ export class InteractivePrompt {
                     return;
                 }
 
+                const showExecSkillSelector = async () => {
+                    if (showingSelector) return;
+                    showingSelector = true;
+
+                    process.stdin.removeListener('data', handleKey);
+                    process.stdin.setRawMode(false);
+
+                    if (editor.boxed) {
+                        editor.clearBox();
+                    }
+
+                    const allSkills = self.getAllSkills ? self.getAllSkills() : self.getUserSkills();
+                    if (allSkills.length === 0) {
+                        showingSelector = false;
+                        editor.render();
+                        process.stdin.setRawMode(true);
+                        process.stdin.on('data', handleKey);
+                        return;
+                    }
+
+                    const sortedSkills = [...allSkills].sort((a, b) => {
+                        const aType = (a.type || '').toLowerCase();
+                        const bType = (b.type || '').toLowerCase();
+                        const aIsOrchestrator = aType === 'orchestrator' || aType === 'oskill';
+                        const bIsOrchestrator = bType === 'orchestrator' || bType === 'oskill';
+                        if (aIsOrchestrator !== bIsOrchestrator) {
+                            return aIsOrchestrator ? -1 : 1;
+                        }
+                        const aName = (a.shortName || a.name || '').toLowerCase();
+                        const bName = (b.shortName || b.name || '').toLowerCase();
+                        return aName.localeCompare(bName);
+                    });
+
+                    const selectedSkill = await showSkillSelector(sortedSkills, {
+                        prompt: '/exec ',
+                        initialFilter: '',
+                    });
+
+                    if (selectedSkill) {
+                        editor.setBuffer(`/exec ${selectedSkill.name}`);
+                    }
+
+                    showingSelector = false;
+                    editor.render();
+                    process.stdin.setRawMode(true);
+                    process.stdin.on('data', handleKey);
+                };
+
                 // Helper to check if buffer is a command needing skill arg
                 const getCommandNeedingSkillArg = () => {
                     const buf = editor.getBuffer();
@@ -372,6 +422,11 @@ export class InteractivePrompt {
                 // Helper to show skill selector for current command
                 const showSkillSelectorForCommand = async (command) => {
                     if (showingSelector) return;
+                    if (command === 'exec') {
+                        await showExecSkillSelector();
+                        return;
+                    }
+
                     showingSelector = true;
 
                     process.stdin.removeListener('data', handleKey);
@@ -438,6 +493,15 @@ export class InteractivePrompt {
                     return;
                 }
 
+                // Handle Space after /exec to show skill selector
+                if (keyStr === ' ') {
+                    const buf = editor.getBuffer();
+                    if (buf === '/exec') {
+                        await showExecSkillSelector();
+                        return;
+                    }
+                }
+
                 // Disabled: space-triggered selector for slash commands.
                 /*
                 // Handle Space after command that needs skill arg
@@ -460,6 +524,10 @@ export class InteractivePrompt {
                         savedBuffer = '';
                     }
                     editor.render();
+                    if (editor.getBuffer() === '/exec') {
+                        await showExecSkillSelector();
+                        return;
+                    }
                     return;
                 }
                 if (action === 'cursor') {

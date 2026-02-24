@@ -86,6 +86,7 @@ export class REPLSession {
             slashHandler: this.slashHandler,
             commandList: this.commandList,
             getUserSkills: () => this.getUserSkills(),
+            getAllSkills: () => agent.getSkills(),
         });
 
         this.quickCommands = new QuickCommands({
