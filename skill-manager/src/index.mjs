@@ -131,7 +131,7 @@ async function main() {
         logger.log?.(`Created .AchillesSkills directory at ${skillsDir}`);
     }
 
-    const nodeModulesSkillRoots = collectNodeModulesSkillRoots(workingDir, logger);
+    const nodeModulesSkillRoots = collectNodeModulesSkillRoots(__dirname, logger);
 
     // Merge all skill roots: built-in + bash-skills + CLI flags + node_modules skills
     const allSkillRoots = [
@@ -344,8 +344,8 @@ function isRunDirectly() {
     }
 }
 
-function collectNodeModulesSkillRoots(workingDir, logger) {
-    const nodeModulesDir = path.join(workingDir, 'node_modules');
+function collectNodeModulesSkillRoots(baseDir, logger) {
+    const nodeModulesDir = path.join(baseDir, '..', 'node_modules');
     if (!fs.existsSync(nodeModulesDir)) {
         return [];
     }
@@ -367,9 +367,15 @@ function collectNodeModulesSkillRoots(workingDir, logger) {
             continue;
         }
 
-        const skillRoot = path.join(nodeModulesDir, entry.name, '.AchillesSkills');
-        if (fs.existsSync(skillRoot)) {
-            roots.push(skillRoot);
+        const packageDir = path.join(nodeModulesDir, entry.name);
+        const skillRoots = [
+            path.join(packageDir, '.AchillesSkills'),
+            path.join(packageDir, 'src', '.AchillesSkills'),
+        ];
+        for (const skillRoot of skillRoots) {
+            if (fs.existsSync(skillRoot)) {
+                roots.push(skillRoot);
+            }
         }
     }
 
