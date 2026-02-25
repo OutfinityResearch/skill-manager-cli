@@ -32,7 +32,7 @@ const HELP_TOPICS = {
 ${C.bold}${C.cyan}What is Skill Manager?${C.reset}
 
 Skill Manager is a CLI tool for creating, managing, and testing skill definition
-files in .AchillesSkills directories. It supports both interactive REPL mode and
+files in skills directories. It supports both interactive REPL mode and
 single-shot command execution.
 
 ${C.bold}${C.yellow}Key Features:${C.reset}
@@ -493,7 +493,7 @@ ${C.bold}${C.yellow}Usage:${C.reset}
   ${C.green}/ls all${C.reset}     List all skills (including built-in)
 
 ${C.bold}${C.yellow}Description:${C.reset}
-  Shows all skills registered in the current project's .AchillesSkills
+  Shows all skills registered in the current project's skills
   directory. By default, only shows user-created skills. Add "all" to
   include built-in skills used by the skill manager itself.
 
@@ -614,7 +614,7 @@ ${C.bold}${C.yellow}What Gets Generated:${C.reset}
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /generate equipment
-  ${C.dim}Generated: .AchillesSkills/equipment/tskill.generated.mjs${C.reset}
+  ${C.dim}Generated: skills/equipment/tskill.generated.mjs${C.reset}
 
 ${C.bold}${C.yellow}After Generation:${C.reset}
   Run ${C.cyan}/test equipment${C.reset} to verify the generated code works.

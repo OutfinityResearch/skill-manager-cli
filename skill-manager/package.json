@@ -1,7 +1,7 @@
 {
     "name": "@outfinityresearch/skill-manager-cli",
     "version": "0.1.0",
-    "description": "CLI agent for managing, generating, and testing skill definition files in .AchillesSkills directories.",
+    "description": "CLI agent for managing, generating, and testing skill definition files in skills directories.",
     "license": "MIT",
     "type": "module",
     "main": "src/index.mjs",

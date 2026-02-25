@@ -12,5 +12,5 @@
         "WORKSPACE_PATH"
     ],
     "cli": "node /code/src/index.mjs",
-    "about": "Skill Manager CLI for managing, generating, and testing skill definition files in .AchillesSkills directories."
+    "about": "Skill Manager CLI for managing, generating, and testing skill definition files in skills directories."
 }

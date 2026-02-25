@@ -76,7 +76,7 @@ SKIP_BASH_PERMISSIONS=true skill-manager
 ## Installation
 
 The bash-skills are bundled and loaded automatically when the
-`bash-skills/.AchillesSkills` directory is present.
+`bash-skills/skills` directory is present.
 
 ## Glob Pattern Support
 
@@ -168,7 +168,7 @@ The risk classifier examines:
 ## Architecture
 
 ```
-bash-skills/.AchillesSkills/
+bash-skills/skills/
 └── bash/
     ├── cgskill.md           # Skill definition
     ├── bash.mjs             # Entry point

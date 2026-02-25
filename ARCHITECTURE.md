@@ -15,7 +15,7 @@
 
 ## Overview
 
-The **skill-manager-cli** is a command-line interface for managing, generating, and testing skill definition files in `.AchillesSkills` directories. It provides both an interactive REPL mode and single-shot command execution, powered by LLM-based natural language understanding.
+The **skill-manager-cli** is a command-line interface for managing, generating, and testing skill definition files in `skills` directories. It provides both an interactive REPL mode and single-shot command execution, powered by LLM-based natural language understanding.
 
 ### Key Capabilities
 
@@ -73,7 +73,7 @@ The **skill-manager-cli** is a command-line interface for managing, generating, 
 │                                                                                  │
 │  ┌────────────────────────────────────────────────────────────────────────┐     │
 │  │                     RecursiveSkilledAgent                              │     │
-│  │  • Skill discovery from .AchillesSkills directories                    │     │
+│  │  • Skill discovery from skills directories                    │     │
 │  │  • Skill catalog management                                            │     │
 │  │  • Subsystem routing                                                   │     │
 │  │  • Prompt execution                                                    │     │
@@ -94,7 +94,7 @@ The **skill-manager-cli** is a command-line interface for managing, generating, 
                                         │
                                         ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          BUILT-IN SKILLS (.AchillesSkills)                       │
+│                          BUILT-IN SKILLS (skills)                       │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐                  │
@@ -339,8 +339,8 @@ This enables multi-source skill discovery without wrapper classes. The CLI uses 
 ### 3. Two-Layer Skill Discovery
 
 **Decision:** Skills are loaded from two locations:
-1. Built-in skills (bundled with the CLI in `src/.AchillesSkills/`)
-2. User skills (in the working directory's `.AchillesSkills/`)
+1. Built-in skills (bundled with the CLI in `src/skills/`)
+2. User skills (in the working directory's `skills/`)
 
 **Rationale:**
 - Built-in skills provide core functionality (list, read, write, validate)
@@ -455,7 +455,7 @@ This enables multi-source skill discovery without wrapper classes. The CLI uses 
 
 ### Built-in Skills
 
-The CLI ships with these built-in skills in `src/.AchillesSkills/`:
+The CLI ships with these built-in skills in `src/skills/`:
 
 | Skill | Type | Purpose |
 |-------|------|---------|
@@ -509,7 +509,7 @@ Skills can optionally include a `.specs.md` file that defines requirements and c
        ▼
 2. findAchillesSkillRoots() scans directories
    • Searches upward from startDir by default
-   • Finds all .AchillesSkills directories
+   • Finds all skills directories
        │
        ▼
 3. registerSkillsFromRoot() for each root

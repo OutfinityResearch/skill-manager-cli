@@ -63,7 +63,7 @@ if (prompt) {
 
 ### Built-in Skills Registration
 ```javascript
-const builtInSkillsDir = path.join(__dirname, '.AchillesSkills');
+const builtInSkillsDir = path.join(__dirname, 'skills');
 
 const agent = new RecursiveSkilledAgent({
     llmAgent,
@@ -72,9 +72,9 @@ const agent = new RecursiveSkilledAgent({
     logger,
 });
 ```
-- Built-in skills live in `src/.AchillesSkills/`
+- Built-in skills live in `src/skills/`
 - `additionalSkillRoots` option registers them alongside user skills
-- User skills in `workingDir/.AchillesSkills/` can override built-ins
+- User skills in `workingDir/skills/` can override built-ins
 
 ### Cross-Platform Direct Execution Check
 ```javascript
@@ -192,7 +192,7 @@ async function main() {
     args = parseArgs(process.argv);
 
     // 2. Ensure skills directory exists
-    ensureDir(path.join(workingDir, '.AchillesSkills'));
+    ensureDir(path.join(workingDir, 'skills'));
 
     // 3. Initialize LLM agent
     llmAgent = new LLMAgent({ name: 'skill-manager-agent' });
@@ -227,7 +227,7 @@ if (isRunDirectly()) {
 
 ## Notes/Constraints
 
-- Must create `.AchillesSkills` directory if not present
+- Must create `skills` directory if not present
 - `builtInSkillsDir` is derived from `__dirname` (ESM modules)
 - Single-shot mode uses `skills-orchestrator` skill by default
 - Version is hardcoded (consider reading from package.json)

@@ -36,7 +36,7 @@ When run directly, the module parses command-line arguments and executes in one 
 
 Working Directory:
 - Flags: --dir, -d
-- Accepts a path to the project directory containing .AchillesSkills
+- Accepts a path to the project directory containing skills
 - Defaults to current working directory
 
 Additional Skill Roots:
@@ -120,8 +120,8 @@ REPLSession receives:
 
 1. Parse all command-line arguments
 2. Configure logger based on verbose flag
-3. Ensure user's .AchillesSkills directory exists (create if missing)
-4. Collect skill roots from node_modules packages with .AchillesSkills
+3. Ensure user's skills directory exists (create if missing)
+4. Collect skill roots from node_modules packages with skills
 5. Merge all skill roots: built-in skills, bash skills, CLI-specified roots, node_modules roots
 6. Initialize LLMAgent with name "skill-manager-agent"
 7. Initialize RecursiveSkilledAgent with LLM agent, working directory, and all skill roots
@@ -131,10 +131,10 @@ REPLSession receives:
 ## Skill Root Sources
 
 Skills are discovered from multiple sources, merged in this order:
-1. Built-in skills bundled with the module (src/.AchillesSkills)
-2. Bash command skills (bash-skills/.AchillesSkills) if directory exists
+1. Built-in skills bundled with the module (src/skills)
+2. Bash command skills (bash-skills/skills) if directory exists
 3. Skill roots specified via --skill-root CLI flags
-4. Skill roots from node_modules packages with .AchillesSkills
+4. Skill roots from node_modules packages with skills
 
 ## Error Handling
 

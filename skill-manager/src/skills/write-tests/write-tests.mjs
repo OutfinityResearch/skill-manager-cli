@@ -117,7 +117,7 @@ const __dirname = path.dirname(__filename);
 // Import the generated module
 let skillModule;
 try {
-    skillModule = await import('../.AchillesSkills/${skillName}/tskill.generated.mjs');
+    skillModule = await import('../skills/${skillName}/tskill.generated.mjs');
 } catch (e) {
     skillModule = null;
 }
@@ -225,10 +225,10 @@ const __dirname = path.dirname(__filename);
 // Import the skill module
 let skillModule;
 try {
-    skillModule = await import('../.AchillesSkills/${skillName}/${skillName}.mjs');
+    skillModule = await import('../skills/${skillName}/${skillName}.mjs');
 } catch (e) {
     try {
-        skillModule = await import('../.AchillesSkills/${skillName}/${skillName}.generated.mjs');
+        skillModule = await import('../skills/${skillName}/${skillName}.generated.mjs');
     } catch (e2) {
         skillModule = null;
     }

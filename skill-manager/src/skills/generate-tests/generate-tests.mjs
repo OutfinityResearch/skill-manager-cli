@@ -205,7 +205,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Path to the skill's src/index.mjs
-const skillSrcDir = path.join(__dirname, '..', '.AchillesSkills', '${skillName}', 'src');
+const skillSrcDir = path.join(__dirname, '..', 'skills', '${skillName}', 'src');
 const indexPath = path.join(skillSrcDir, 'index.mjs');
 
 /**
@@ -326,7 +326,7 @@ export async function action(recursiveSkilledAgent, prompt) {
     // Find the skill
     const skillInfo = recursiveSkilledAgent?.findSkillFile?.(skillName);
     if (!skillInfo) {
-        return `Error: Skill "${skillName}" not found.\n\nMake sure the skill exists in a .AchillesSkills directory.`;
+        return `Error: Skill "${skillName}" not found.\n\nMake sure the skill exists in a skills directory.`;
     }
 
     const filePath = skillInfo.filePath;

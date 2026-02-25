@@ -14,7 +14,7 @@ Accepts:
 - agent: A RecursiveSkilledAgent instance for skill execution
 - options: Configuration object with the following optional fields:
   - workingDir: Working directory path (defaults to agent's start directory)
-  - skillsDir: Skills directory path (defaults to workingDir/.AchillesSkills)
+  - skillsDir: Skills directory path (defaults to workingDir/skills)
   - builtInSkillsDir: Path to built-in skills directory for filtering user skills
   - historyManager: Pre-configured HistoryManager instance
   - debug: Enable debug mode showing full JSON output

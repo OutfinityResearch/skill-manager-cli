@@ -33,7 +33,7 @@ REPLSession orchestrates the interactive CLI experience by:
 constructor(agent, options = {}) {
     // Configuration from options
     this.workingDir = options.workingDir || agent.startDir;
-    this.skillsDir = options.skillsDir || path.join(this.workingDir, '.AchillesSkills');
+    this.skillsDir = options.skillsDir || path.join(this.workingDir, 'skills');
 
     // Create shared context for skill execution
     this.context = {

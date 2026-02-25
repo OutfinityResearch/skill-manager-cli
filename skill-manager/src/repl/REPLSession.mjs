@@ -31,7 +31,7 @@ export class REPLSession {
      * @param {RecursiveSkilledAgent} agent - The RecursiveSkilledAgent instance
      * @param {Object} options - Session options
      * @param {string} options.workingDir - Working directory path
-     * @param {string} [options.skillsDir] - Skills directory path (defaults to workingDir/.AchillesSkills)
+     * @param {string} [options.skillsDir] - Skills directory path (defaults to workingDir/skills)
      * @param {string} [options.builtInSkillsDir] - Built-in skills directory (for filtering user skills)
      * @param {HistoryManager} [options.historyManager] - Command history manager (created if not provided)
      * @param {boolean} [options.debug] - Enable debug mode
@@ -42,7 +42,7 @@ export class REPLSession {
 
         // Configuration
         this.workingDir = options.workingDir || agent.startDir;
-        this.skillsDir = options.skillsDir || path.join(this.workingDir, '.AchillesSkills');
+        this.skillsDir = options.skillsDir || path.join(this.workingDir, 'skills');
         this.builtInSkillsDir = options.builtInSkillsDir || null;
         this.debug = options.debug || false;
 

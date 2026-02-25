@@ -628,7 +628,7 @@
                 <pre><code><span class="token-command">mkdir</span> my-skills-project
 <span class="token-command">cd</span> my-skills-project
 <span class="token-command">skill-manager-cli</span></code></pre>
-                <p>This creates a <code>.AchillesSkills</code> directory for your custom skills.</p>
+                <p>This creates a <code>skills</code> directory for your custom skills.</p>
 
                 <h3>2. List available skills</h3>
                 <pre><code><span class="token-command">/list</span> all</code></pre>
@@ -1332,7 +1332,7 @@ For queries, use list-tasks or search-tasks.
 
                 <h3>File Location</h3>
                 <p>Place the <code>.specs.md</code> file in the same directory as the skill definition:</p>
-                <pre><code>.AchillesSkills/
+                <pre><code>skills/
 └── equipment/
     ├── tskill.md              <span class="token-comment"># Skill definition</span>
     ├── tskill.generated.mjs   <span class="token-comment"># Generated code</span>
@@ -1817,7 +1817,7 @@ Generate clean ESM code with JSDoc comments.</code></pre>
                     </tr>
                     <tr>
                         <td><code>-d, --dir &lt;path&gt;</code></td>
-                        <td>Working directory with .AchillesSkills</td>
+                        <td>Working directory with skills</td>
                     </tr>
                     <tr>
                         <td><code>-v, --verbose</code></td>
@@ -1876,7 +1876,7 @@ Generate clean ESM code with JSDoc comments.</code></pre>
 
                 <h3>Directory Structure</h3>
                 <pre><code>my-project/
-├── .AchillesSkills/           <span class="token-comment"># User-defined skills</span>
+├── skills/           <span class="token-comment"># User-defined skills</span>
 │   ├── my-skill/
 │   │   ├── my-skill.tskill.md
 │   │   ├── my-skill.tskill.generated.mjs
@@ -1952,7 +1952,7 @@ Generate clean ESM code with JSDoc comments.</code></pre>
 │                 RecursiveSkilledAgent                        │
 │   ┌─────────────────┐        ┌─────────────────────────┐    │
 │   │  Built-in Skills │        │     User Skills         │    │
-│   │  (src/.Achilles) │        │  (.AchillesSkills/)     │    │
+│   │  (src/.Achilles) │        │  (skills/)     │    │
 │   └─────────────────┘        └─────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘</code></pre>
 
@@ -1966,13 +1966,13 @@ Generate clean ESM code with JSDoc comments.</code></pre>
     ├── scripts/            <span class="token-comment"># Install scripts</span>
     ├── src/                <span class="token-comment"># Source code</span>
     │   ├── index.mjs       <span class="token-comment"># Entry point</span>
-    │   └── .AchillesSkills/ <span class="token-comment"># Built-in skills</span>
+    │   └── skills/ <span class="token-comment"># Built-in skills</span>
     └── bin/                <span class="token-comment"># CLI binaries</span></code></pre>
 
                 <h3>Two-Layer Skill Discovery</h3>
                 <ol>
-                    <li><strong>Built-in Skills</strong> - Bundled with CLI in <code>skill-manager/src/.AchillesSkills/</code></li>
-                    <li><strong>User Skills</strong> - Project-specific in <code>.AchillesSkills/</code></li>
+                    <li><strong>Built-in Skills</strong> - Bundled with CLI in <code>skill-manager/src/skills/</code></li>
+                    <li><strong>User Skills</strong> - Project-specific in <code>skills/</code></li>
                 </ol>
                 <p>User skills can override built-in skills of the same name.</p>
 

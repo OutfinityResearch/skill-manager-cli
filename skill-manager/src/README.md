@@ -1,6 +1,6 @@
 # Skill Manager Agent v2.0
 
-A CLI agent specialized in managing, generating, and testing skill definition files in `.AchillesSkills` directories.
+A CLI agent specialized in managing, generating, and testing skill definition files in `skills` directories.
 
 ## Features
 
@@ -40,7 +40,7 @@ skill-manager "create a tskill called inventory"
 skill-manager [options] [prompt]
 
 Options:
-  -d, --dir <path>   Working directory with .AchillesSkills (default: cwd)
+  -d, --dir <path>   Working directory with skills (default: cwd)
   -v, --verbose      Enable verbose logging
   --fast             Use fast LLM mode (cheaper, quicker)
   --deep             Use deep LLM mode (default, more capable)
@@ -58,7 +58,7 @@ $ skill-manager --dir ./my-project
 ╚══════════════════════════════════════════════════════════╝
 
 Working directory: /path/to/my-project
-Skills directory: /path/to/my-project/.AchillesSkills
+Skills directory: /path/to/my-project/skills
 Loaded 3 skill(s):
   • [dbtable] equipment
   • [code] import
@@ -286,7 +286,7 @@ SkillManagerAgent/
 ├── SkillManagerAgent.mjs  # Main agent class
 ├── skillSchemas.mjs       # Schema definitions & templates
 ├── README.md              # This file
-└── .AchillesSkills/       # Built-in skills (optional)
+└── skills/       # Built-in skills (optional)
 ```
 
 ## Examples
@@ -326,7 +326,7 @@ SkillManager> test the generated code for product with input:
 ## Troubleshooting
 
 **"No skills found"**
-- Check that `.AchillesSkills` directory exists
+- Check that `skills` directory exists
 - Run `reload_skills` after creating new skills
 
 **"Skill type not detected"**

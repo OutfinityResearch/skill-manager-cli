@@ -20,10 +20,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Path to built-in skills bundled with this module
-const builtInSkillsDir = path.join(__dirname, '.AchillesSkills');
+const builtInSkillsDir = path.join(__dirname, 'skills');
 
 // Path to bash command skills (bundled with this repo)
-const bashSkillsDir = path.join(__dirname, '../../bash-skills/.AchillesSkills');
+const bashSkillsDir = path.join(__dirname, '../../bash-skills/skills');
 
 // Re-export classes and functions for library usage
 export {
@@ -125,7 +125,7 @@ async function main() {
     };
 
     // User skills directory (do not create automatically)
-    const skillsDir = path.join(workingDir, '.AchillesSkills');
+    const skillsDir = path.join(workingDir, 'skills');
 
     const nodeModulesSkillRoots = collectNodeModulesSkillRoots(__dirname, logger);
 
@@ -250,7 +250,7 @@ USAGE:
   skill-manager [options] [prompt]
 
 OPTIONS:
-  -d, --dir <path>       Working directory containing .AchillesSkills (default: cwd)
+  -d, --dir <path>       Working directory containing skills (default: cwd)
   -r, --skill-root <path>  Add additional skill root (can be used multiple times)
   -v, --verbose          Enable verbose logging
   --debug                Show full JSON output (orchestrator plans, executions)
@@ -365,8 +365,8 @@ function collectNodeModulesSkillRoots(baseDir, logger) {
 
         const packageDir = path.join(nodeModulesDir, entry.name);
         const skillRoots = [
-            path.join(packageDir, '.AchillesSkills'),
-            path.join(packageDir, 'src', '.AchillesSkills'),
+            path.join(packageDir, 'skills'),
+            path.join(packageDir, 'src', 'skills'),
         ];
         for (const skillRoot of skillRoots) {
             if (fs.existsSync(skillRoot)) {
