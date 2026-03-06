@@ -64,34 +64,45 @@ export class NaturalLanguageProcessor {
         }
 
         // Set up a prompt reader that pauses the reporter during user input
-        this.agent.promptReader = async (prompt) => {
-            // Pause the action reporter while waiting for user input
-            actionReporter.pause();
+        const llmAgent = this.agent.llmAgent;
+        const previousInputReader = llmAgent?.inputReader || null;
 
-            // Temporarily disable raw mode for readline
-            if (process.stdin.isTTY) {
-                process.stdin.setRawMode(false);
-                process.stdin.removeListener('data', handleKeypress);
-            }
-
-            return new Promise((resolve) => {
-                const rl = readline.createInterface({
-                    input: process.stdin,
-                    output: process.stdout,
-                });
-                rl.question(prompt, (answer) => {
-                    rl.close();
-                    // Re-enable raw mode and ESC listener
-                    if (process.stdin.isTTY) {
-                        process.stdin.setRawMode(true);
-                        process.stdin.on('data', handleKeypress);
+        if (llmAgent) {
+            llmAgent.setInputReader({
+                read: async (prompt = '> ') => {
+                    if (!process.stdin.isTTY) {
+                        throw new Error('Interactive input requested but stdin is not a TTY.');
                     }
-                    // Resume the action reporter after user responds
-                    actionReporter.resume();
-                    resolve(answer);
-                });
+
+                    // Pause the action reporter while waiting for user input
+                    actionReporter.pause();
+
+                    // Temporarily disable raw mode for readline
+                    if (process.stdin.isTTY) {
+                        process.stdin.setRawMode(false);
+                        process.stdin.removeListener('data', handleKeypress);
+                    }
+
+                    return new Promise((resolve) => {
+                        const rl = readline.createInterface({
+                            input: process.stdin,
+                            output: process.stdout,
+                        });
+                        rl.question(prompt, (answer) => {
+                            rl.close();
+                            // Re-enable raw mode and ESC listener
+                            if (process.stdin.isTTY) {
+                                process.stdin.setRawMode(true);
+                                process.stdin.on('data', handleKeypress);
+                            }
+                            // Resume the action reporter after user responds
+                            actionReporter.resume();
+                            resolve(answer);
+                        });
+                    });
+                },
             });
-        };
+        }
 
         // Start with initial "Thinking" action
         actionReporter.thinking();
@@ -135,7 +146,9 @@ export class NaturalLanguageProcessor {
 
             // Clean up reporter and prompt reader
             this.agent.setActionReporter(null);
-            this.agent.promptReader = null;
+            if (llmAgent) {
+                llmAgent.setInputReader(previousInputReader);
+            }
 
             // Save command to history (unless interrupted)
             if (!wasInterrupted) {

@@ -6,6 +6,8 @@
  */
 
 import path from 'node:path';
+import readline from 'node:readline';
+import { LineEditor } from '../ui/LineEditor.mjs';
 import { createSpinner } from '../ui/spinner.mjs';
 import { buildCommandList, showTestSelector, showHelpSelector } from '../ui/CommandSelector.mjs';
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
@@ -102,6 +104,60 @@ export class REPLSession {
             processPrompt: (input, opts) => this.processPrompt(input, opts),
             historyManager: this.historyManager,
             isMarkdownEnabled: () => this.markdownEnabled,
+        });
+
+        this._activeSpinner = null;
+        this._activeSpinnerMessage = '';
+        this._registerLLMIO();
+    }
+
+    _setActiveSpinner(spinner) {
+        this._activeSpinner = spinner;
+        this._activeSpinnerMessage = spinner?.message || '';
+    }
+
+    _registerLLMIO() {
+        const llmAgent = this.agent?.llmAgent;
+        if (!llmAgent) {
+            return;
+        }
+
+        const { colors } = UIContext.getTheme();
+
+        llmAgent.setInputReader({
+            read: async (prompt = '> ') => {
+                if (!process.stdin.isTTY) {
+                    throw new Error('Interactive input requested but stdin is not a TTY.');
+                }
+
+                const spinner = this._activeSpinner;
+                const previousMessage = this._activeSpinnerMessage;
+                if (spinner) {
+                    spinner.update?.('Awaiting Input...');
+                    spinner.pause?.();
+                }
+
+                const answer = await this._promptWithBox(prompt, colors);
+
+                if (spinner) {
+                    spinner.update?.(previousMessage || spinner.message || 'Running...');
+                    spinner.resume?.();
+                }
+
+                return answer;
+            },
+        });
+
+        llmAgent.setOutputWriter({
+            write: async (message) => {
+                if (message === null || message === undefined) {
+                    return;
+                }
+                const text = typeof message === 'string'
+                    ? message
+                    : JSON.stringify(message, null, 2);
+                console.log(text);
+            },
         });
     }
 
@@ -345,6 +401,7 @@ export class REPLSession {
 
         // Create spinner for slash command execution
         const spinner = createSpinner(`Running /${parsed.command}...`);
+        this._setActiveSpinner(spinner);
 
         try {
             const result = await this.slashHandler.executeSlashCommand(parsed.command, parsed.args, {
@@ -394,6 +451,8 @@ export class REPLSession {
         } catch (error) {
             spinner.fail(error.message);
         }
+
+        this._setActiveSpinner(null);
 
         return false;
     }
@@ -598,6 +657,80 @@ export class REPLSession {
 
         // Save to history
         this.historyManager.add(`/help ${topicName}`);
+    }
+
+    async _promptWithBox(prompt, colors) {
+        const question = typeof prompt === 'string' && prompt.trim()
+            ? prompt.trim()
+            : 'Please provide the missing details.';
+
+        if (!process.stdin.isTTY) {
+            return new Promise((resolve) => {
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                });
+                let answered = false;
+                const finalize = (answer = '') => {
+                    if (answered) return;
+                    answered = true;
+                    rl.close();
+                    resolve(answer);
+                };
+                rl.on('SIGINT', () => finalize(''));
+                rl.question(`${question}\n> `, (answer) => finalize(answer));
+            });
+        }
+
+        process.stdout.write(`\n${colors.dim}${question}${colors.reset}\n`);
+
+        return new Promise((resolve) => {
+            const editor = new LineEditor({
+                prompt: `${colors.cyan}${colors.bold}>${colors.reset} `,
+                rightHint: `${colors.dim}↵ send${colors.reset}`,
+                boxed: true,
+            });
+
+            editor.render();
+            process.stdin.setRawMode(true);
+            process.stdin.resume();
+            LineEditor.enableBracketedPaste();
+
+            const cleanup = () => {
+                if (editor.boxed) {
+                    editor.drawBottomBorder();
+                }
+                LineEditor.disableBracketedPaste();
+                process.stdin.setRawMode(false);
+                process.stdin.removeListener('data', handleKey);
+            };
+
+            const handleKey = (key) => {
+                const keyStr = key.toString();
+
+                if (keyStr === '\x03') {
+                    cleanup();
+                    process.stdout.write('\n');
+                    resolve('');
+                    return;
+                }
+
+                if (keyStr === '\r' || keyStr === '\n') {
+                    const value = editor.getBuffer();
+                    cleanup();
+                    process.stdout.write('\n');
+                    resolve(value);
+                    return;
+                }
+
+                const action = editor.processKey(keyStr);
+                if (action === 'modified' || action === 'cursor') {
+                    editor.render();
+                }
+            };
+
+            process.stdin.on('data', handleKey);
+        });
     }
 }
 

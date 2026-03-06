@@ -48,6 +48,7 @@ export class Spinner {
         this.isSpinning = false;
         this.isPaused = false;
         this.showInterruptHint = options.showInterruptHint || false;
+        this.overlayInput = false;
     }
 
     start(message = 'Processing') {
@@ -74,6 +75,11 @@ export class Spinner {
         const elapsed = this.getElapsed();
         const line = `${this.color}${frame}${this.colors.reset} ${this.message} ${this.colors.dim}${elapsed}${this.colors.reset}`;
 
+        if (this.overlayInput) {
+            this.stream.write(`\x1b7\x1b[A\r\x1b[K${line}\x1b8`);
+            return;
+        }
+
         if (this.showInterruptHint) {
             // Clear current line and line below, then write both lines
             const hint = `${this.colors.dim}   Esc to interrupt${this.colors.reset}`;
@@ -82,6 +88,16 @@ export class Spinner {
             // Clear line and write
             this.stream.write(`\r\x1b[K${line}`);
         }
+    }
+
+    enableInputOverlay() {
+        this.overlayInput = true;
+        return this;
+    }
+
+    disableInputOverlay() {
+        this.overlayInput = false;
+        return this;
     }
 
     getElapsed() {

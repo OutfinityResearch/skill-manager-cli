@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { realpathSync } from 'node:fs';
 import { RecursiveSkilledAgent } from 'achillesAgentLib/RecursiveSkilledAgents';
@@ -146,6 +147,8 @@ async function main() {
     const llmAgent = new LLMAgent({
         name: 'skill-manager-agent',
     });
+    llmAgent.setInputReader(createCliInputReader());
+    llmAgent.setOutputWriter(createCliOutputWriter());
 
     // Initialize RecursiveSkilledAgent with all skill roots
     const agent = new RecursiveSkilledAgent({
@@ -237,6 +240,48 @@ async function main() {
         });
         await session.start();
     }
+}
+
+function createCliInputReader() {
+    return {
+        read: async (prompt = '> ') => {
+            if (!process.stdin.isTTY) {
+                throw new Error('Interactive input requested but stdin is not a TTY.');
+            }
+
+            return new Promise((resolve) => {
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout,
+                });
+
+                let done = false;
+                const finalize = (answer = '') => {
+                    if (done) return;
+                    done = true;
+                    rl.close();
+                    resolve(answer);
+                };
+
+                rl.on('SIGINT', () => finalize(''));
+                rl.question(prompt, (answer) => finalize(answer));
+            });
+        },
+    };
+}
+
+function createCliOutputWriter() {
+    return {
+        write: async (message) => {
+            if (message === null || message === undefined) {
+                return;
+            }
+            const text = typeof message === 'string'
+                ? message
+                : JSON.stringify(message, null, 2);
+            console.log(text);
+        },
+    };
 }
 
 function printHelp() {
