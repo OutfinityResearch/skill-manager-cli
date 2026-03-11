@@ -49,6 +49,13 @@ export const SKILL_TYPES = {
         requiredSections: ['Summary', 'Prompt'],
         optionalSections: ['Argument', 'LLM-Mode', 'Examples'],
     },
+    claude: {
+        fileName: 'SKILL.md',
+        generatedFileName: null,
+        description: 'Claude skill - LLM loop session with tools (ask-user, run-script, get-resource)',
+        requiredSections: [],
+        optionalSections: ['Scripts', 'Resources', 'Examples'],
+    },
 };
 
 export const SKILL_TEMPLATES = {
@@ -331,6 +338,35 @@ Output: "example output"
 Input: { "data": "...", "options": { "format": "json" } }
 Output: { "result": "..." }
 `,
+
+    claude: `# [Skill Name]
+
+[One-line summary of what this skill does]
+
+You are a [role description]. Your task is to [primary objective].
+
+## Guidelines
+
+- [Guideline 1]
+- [Guideline 2]
+- [Guideline 3]
+
+## Scripts
+
+If a \`scripts/\` directory exists alongside this file, you can run shell scripts using the \`run-script\` tool.
+Example: Place executable scripts in \`scripts/\` and invoke them by path (e.g., \`scripts/build.sh\`).
+
+## Resources
+
+If a \`resources/\` directory exists alongside this file, you can read files using the \`get-resource\` tool.
+Example: Place reference files in \`resources/\` and read them by path (e.g., \`resources/config.json\`).
+
+## Examples
+
+### Example 1
+User: "[example user input]"
+Assistant: "[example assistant response]"
+`,
 };
 
 /**
@@ -382,6 +418,16 @@ export function detectSkillType(content) {
     // Check for code generation skill (cgskill) - has Summary and Prompt
     if (contentLower.includes('## summary') && contentLower.includes('## prompt')) {
         return 'cgskill';
+    }
+
+    // Check for Claude skill - has Scripts or Resources sections,
+    // or mentions run-script/get-resource/ask-user tools
+    if (contentLower.includes('## scripts') ||
+        contentLower.includes('## resources') ||
+        contentLower.includes('run-script') ||
+        contentLower.includes('get-resource') ||
+        contentLower.includes('ask-user')) {
+        return 'claude';
     }
 
     return null;

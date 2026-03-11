@@ -62,7 +62,7 @@ export class SlashCommandHandler {
         'template': {
             skill: BUILT_IN_SKILLS.GET_TEMPLATE,
             usage: '/template <type>',
-            description: 'Get blank template (tskill, cskill, cgskill, etc.)',
+            description: 'Get blank template (tskill, cskill, cgskill, claude, etc.)',
             args: 'required',
             needsSkillArg: false, // Takes type, not skill name
         },
@@ -383,7 +383,7 @@ export class SlashCommandHandler {
 
                 // For /template, suggest skill types
                 if (command === 'template') {
-                    const types = ['tskill', 'cskill', 'cgskill', 'iskill', 'oskill', 'mskill'];
+                    const types = ['tskill', 'cskill', 'cgskill', 'iskill', 'oskill', 'mskill', 'claude'];
                     const matchingTypes = types
                         .filter(t => t.startsWith(argPrefix))
                         .map(t => `/${command} ${t}`);
@@ -404,7 +404,7 @@ export class SlashCommandHandler {
                 if (command === 'write' && args.includes(' ')) {
                     const parts = args.split(/\s+/);
                     const typePrefix = parts[1]?.toLowerCase() || '';
-                    const types = ['tskill', 'cskill', 'cgskill', 'iskill', 'oskill', 'mskill'];
+                    const types = ['tskill', 'cskill', 'cgskill', 'iskill', 'oskill', 'mskill', 'claude'];
                     const matchingTypes = types
                         .filter(t => t.startsWith(typePrefix))
                         .map(t => `/${command} ${parts[0]} ${t}`);
