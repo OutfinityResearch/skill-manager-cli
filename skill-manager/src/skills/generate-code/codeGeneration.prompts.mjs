@@ -420,12 +420,12 @@ ${content}
 \`\`\`javascript
 /**
  * ${skillName} - Code Skill
- * [Description from Summary section]
+ * [Description from Description section]
  */
 
 export const specs = {
     name: '${skillName}',
-    description: '[From Summary section]',
+    description: '[From Description section]',
     type: 'code',
     llmMode: '${llmMode.trim().toLowerCase()}',
     arguments: {

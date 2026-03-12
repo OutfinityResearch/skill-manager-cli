@@ -143,7 +143,7 @@ ${C.bold}${C.yellow}tskill${C.reset} - Database Table Skill
 ${C.bold}${C.yellow}cskill${C.reset} - Code Skill
   ${C.dim}LLM generates code from specs/ folder during discovery.${C.reset}
   ${C.green}File:${C.reset} cskill.md + specs/*.md → src/*.mjs
-  ${C.green}Sections:${C.reset} Summary, Input Format, Output Format, Constraints
+  ${C.green}Sections:${C.reset} Description, Input Format, Output Format, Constraints
   ${C.green}Use for:${C.reset} Complex business logic from natural language specs
 
 ${C.bold}${C.yellow}cgskill${C.reset} - Code Generation Skill
@@ -763,7 +763,7 @@ ${C.bold}${C.yellow}Description:${C.reset}
 
 ${C.bold}${C.yellow}Common Sections:${C.reset}
   ${C.cyan}tskill:${C.reset} Table Purpose, Fields, Business Rules
-  ${C.cyan}cskill:${C.reset} Summary, Prompt, Arguments, Examples
+  ${C.cyan}cskill:${C.reset} Description, Input Format, Output Format, Constraints
   ${C.cyan}oskill:${C.reset} Instructions, Allowed Skills
 
 ${C.bold}${C.yellow}Examples:${C.reset}

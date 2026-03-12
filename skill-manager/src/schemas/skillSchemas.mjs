@@ -18,7 +18,7 @@ export const SKILL_TYPES = {
         fileName: 'cskill.md',
         generatedFileName: null, // Uses separate .js file
         description: 'Code skill - LLM generates and executes code based on specs',
-        requiredSections: ['Summary', 'Input Format', 'Output Format'],
+        requiredSections: ['Description', 'Input Format', 'Output Format'],
         optionalSections: ['Constraints', 'Examples'],
     },
     iskill: {
@@ -155,7 +155,7 @@ Must be one of the enumerated values.
 
 [One-line description of what this skill does]
 
-## Summary
+## Description
 [Brief description of the skill's purpose and capabilities]
 
 ## Input Format

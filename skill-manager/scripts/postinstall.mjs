@@ -11,6 +11,10 @@ const repoSpecs = [
         name: 'GAMPSkills',
         url: 'https://github.com/OutfinityResearch/GAMPSkills.git',
     },
+    {
+        name: 'marketingskills',
+        url: 'https://github.com/coreyhaines31/marketingskills.git',
+    },
 ];
 
 const projectRoot = process.cwd();
