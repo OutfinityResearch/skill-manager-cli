@@ -175,12 +175,11 @@ Generate the complete test file with actual tests based on the skill definition.
 }
 
 /**
- * Build test generation prompt for cskill/iskill/oskill
+ * Build test generation prompt for cskill/oskill
  */
 function buildCodeSkillTestPrompt(skillName, skillType, definition, sections, generatedCode, specsContent) {
     const typeDesc = {
         cskill: 'code skill (LLM-generated code)',
-        iskill: 'interactive skill (conversational)',
         oskill: 'orchestrator skill (routes to other skills)',
     }[skillType] || 'skill';
 

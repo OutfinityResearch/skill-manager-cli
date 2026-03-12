@@ -2,7 +2,7 @@
 
 Shows a diff before applying changes to a skill file.
 
-## Summary
+## Description
 Compares current content with proposed changes and displays differences.
 
 ## Prompt

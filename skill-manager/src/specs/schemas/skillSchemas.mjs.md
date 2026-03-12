@@ -21,35 +21,28 @@ Registry of skill type definitions with metadata.
 - fileName: cskill.md
 - generatedFileName: null (uses separate .js file)
 - description: Code skill where LLM generates and executes code based on specs
-- requiredSections: Summary, Input Format, Output Format
+- requiredSections: Description, Input Format, Output Format
 - optionalSections: Constraints, Examples
-
-### iskill (Interactive Skill)
-- fileName: iskill.md
-- generatedFileName: null
-- description: Interactive conversational skill with user input
-- requiredSections: Summary, Commands
-- optionalSections: Roles, Session Storage
 
 ### oskill (Orchestrator Skill)
 - fileName: oskill.md
 - generatedFileName: null
 - description: Orchestrator routing intents to other skills
 - requiredSections: Instructions, Allowed Skills
-- optionalSections: Intent Recognition, Routing Logic, Fallback Behavior
+- optionalSections: Description, Routing Logic, Fallback Behavior
 
 ### mskill (MCP Skill)
 - fileName: mskill.md
 - generatedFileName: null
 - description: Skill using Model Context Protocol tools
-- requiredSections: Summary, MCP Tools
+- requiredSections: Description, MCP Tools
 - optionalSections: Configuration
 
 ### cgskill (Code Generation Skill)
 - fileName: cgskill.md
 - generatedFileName: null
 - description: Code generation skill with LLM runtime or hand-written module
-- requiredSections: Summary, Prompt
+- requiredSections: Description, Prompt
 - optionalSections: Argument, LLM-Mode, Examples
 
 ## SKILL_TEMPLATES Object
@@ -73,11 +66,10 @@ Accepts:
 
 Detection rules in order:
 1. tskill: Has "## Table Purpose", "## Fields", or "### Field Value Validator"
-2. oskill: Has "## Allowed Skills", "## Intent Recognition", or "## Routing Logic"
-3. iskill: Has "## Required Arguments" or both "## Commands" and "## Roles/Session"
-4. mskill: Has "## MCP Tools" or "### Server Connection"
-5. cskill: Has both "## Input Format" and "## Output Format"
-6. cgskill: Has both "## Summary" and "## Prompt"
+2. oskill: Has "## Allowed Skills", "## Description", or "## Routing Logic"
+3. mskill: Has "## MCP Tools" or "### Server Connection"
+4. cskill: Has both "## Input Format" and "## Output Format"
+5. cgskill: Has both "## Description" and "## Prompt"
 
 Returns skill type string or null if unknown.
 

@@ -2,7 +2,7 @@
 
 Reads a skill definition file.
 
-## Summary
+## Description
 Reads and returns the content of a skill's .md definition file.
 
 ## Prompt

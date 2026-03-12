@@ -2,7 +2,7 @@
 
 Creates or updates a skill definition file.
 
-## Summary
+## Description
 Writes content to a skill file, creating the skill directory if needed.
 
 ## Prompt

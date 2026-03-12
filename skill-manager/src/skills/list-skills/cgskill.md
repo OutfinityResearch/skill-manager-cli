@@ -2,7 +2,7 @@
 
 Lists all discovered skills in the catalog.
 
-## Summary
+## Description
 Returns a formatted list of all registered skills with their types, summaries, and locations.
 
 ## Prompt

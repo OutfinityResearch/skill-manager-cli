@@ -149,14 +149,8 @@ ${C.bold}${C.yellow}cskill${C.reset} - Code Skill
 ${C.bold}${C.yellow}cgskill${C.reset} - Code Generation Skill
   ${C.dim}LLM decides text/code at runtime or uses hand-written module.${C.reset}
   ${C.green}File:${C.reset} cgskill.md (+ optional module)
-  ${C.green}Sections:${C.reset} Summary, Prompt, Arguments, LLM Mode, Examples
+  ${C.green}Sections:${C.reset} Description, Prompt, Arguments, LLM Mode, Examples
   ${C.green}Use for:${C.reset} Utilities, agent API access, deterministic tools
-
-${C.bold}${C.yellow}iskill${C.reset} - Interactive Skill
-  ${C.dim}Conversational commands with user input collection.${C.reset}
-  ${C.green}File:${C.reset} iskill.md
-  ${C.green}Sections:${C.reset} Summary, Commands, Roles, Session Storage
-  ${C.green}Use for:${C.reset} Wizards, multi-step workflows, guided processes
 
 ${C.bold}${C.yellow}oskill${C.reset} - Orchestrator Skill
   ${C.dim}Routes user intents to other skills.${C.reset}
@@ -167,7 +161,7 @@ ${C.bold}${C.yellow}oskill${C.reset} - Orchestrator Skill
 ${C.bold}${C.yellow}mskill${C.reset} - MCP Skill
   ${C.dim}Uses Model Context Protocol tools.${C.reset}
   ${C.green}File:${C.reset} mskill.md
-  ${C.green}Sections:${C.reset} Summary, MCP Tools, Configuration
+  ${C.green}Sections:${C.reset} Description, MCP Tools, Configuration
   ${C.green}Use for:${C.reset} External tool integrations
 
 ${C.dim}Type /template <type> to get a blank template.${C.reset}
@@ -499,7 +493,7 @@ ${C.bold}${C.yellow}Description:${C.reset}
 
 ${C.bold}${C.yellow}Output:${C.reset}
   Each skill shows: [type] skill-name
-  Types: tskill, cskill, cgskill, iskill, oskill, mskill
+  Types: tskill, cskill, cgskill, oskill, mskill
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /ls
@@ -547,7 +541,6 @@ ${C.bold}${C.yellow}Skill Types:${C.reset}
   ${C.cyan}tskill${C.reset}  - Database table skill
   ${C.cyan}cskill${C.reset}  - Code skill (LLM generates from specs)
   ${C.cyan}cgskill${C.reset} - Code generation skill (module or runtime LLM)
-  ${C.cyan}iskill${C.reset}  - Interactive skill
   ${C.cyan}oskill${C.reset}  - Orchestrator skill
   ${C.cyan}mskill${C.reset}  - MCP tool skill
 
@@ -764,7 +757,7 @@ ${C.bold}${C.yellow}Description:${C.reset}
 ${C.bold}${C.yellow}Common Sections:${C.reset}
   ${C.cyan}tskill:${C.reset} Table Purpose, Fields, Business Rules
   ${C.cyan}cskill:${C.reset} Description, Input Format, Output Format, Constraints
-  ${C.cyan}oskill:${C.reset} Instructions, Allowed Skills
+  ${C.cyan}oskill:${C.reset} Instructions, Allowed Skills, Description
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /update equipment Fields
@@ -784,7 +777,6 @@ ${C.bold}${C.yellow}Types:${C.reset}
   ${C.cyan}tskill${C.reset}  - Database table skill template
   ${C.cyan}cskill${C.reset}  - Code skill template (spec-based)
   ${C.cyan}cgskill${C.reset} - Code generation skill template
-  ${C.cyan}iskill${C.reset}  - Interactive skill template
   ${C.cyan}oskill${C.reset}  - Orchestrator skill template
   ${C.cyan}mskill${C.reset}  - MCP skill template
 

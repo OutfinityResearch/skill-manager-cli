@@ -1,6 +1,6 @@
 # Run Tests
 
-## Summary
+## Description
 Discovers and runs tests for skills. Supports per-skill tests (.tests.mjs files) and running all discovered tests.
 
 ## Prompt

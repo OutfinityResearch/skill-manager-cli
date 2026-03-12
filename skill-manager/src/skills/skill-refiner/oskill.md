@@ -41,7 +41,7 @@ You are a Skill Refiner that iteratively improves skills. Follow this loop:
 - test-code
 - update-section
 
-## Intents
+## Description
 - refine: Start iterative improvement on a skill
 - evaluate: Check if current state meets requirements
 - fix: Apply fixes based on failure analysis

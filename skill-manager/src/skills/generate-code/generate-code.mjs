@@ -1,5 +1,5 @@
 /**
- * Generate Code - Generates .mjs code from skill definitions (tskill, iskill, oskill, cskill)
+ * Generate Code - Generates .mjs code from skill definitions (tskill, oskill, cskill)
  *
  * Generates code for supported skill definitions.
  */
@@ -9,14 +9,13 @@ import path from 'node:path';
 import { detectSkillType, parseSkillSections, loadSpecsContent } from '../../schemas/skillSchemas.mjs';
 import {
     buildCodeGenPrompt,
-    buildIskillCodeGenPrompt,
     buildOskillCodeGenPrompt,
     buildCskillCodeGenPrompt,
 } from './codeGeneration.prompts.mjs';
 import { runTestFile } from '../../lib/testDiscovery.mjs';
 import { formatTestResult } from '../../ui/TestResultFormatter.mjs';
 
-const SUPPORTED_TYPES = ['tskill', 'iskill', 'oskill', 'cskill'];
+const SUPPORTED_TYPES = ['tskill', 'oskill', 'cskill'];
 
 /**
  * Check if regeneration is needed by comparing file modification times.
@@ -137,9 +136,6 @@ export async function action(recursiveSkilledAgent, prompt) {
     switch (skillType) {
         case 'tskill':
             codeGenPrompt = buildCodeGenPrompt(skillName, content, sections, specsContent);
-            break;
-        case 'iskill':
-            codeGenPrompt = buildIskillCodeGenPrompt(skillName, content, sections, specsContent);
             break;
         case 'oskill':
             codeGenPrompt = buildOskillCodeGenPrompt(skillName, content, sections, specsContent);

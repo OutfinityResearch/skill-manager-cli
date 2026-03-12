@@ -334,7 +334,7 @@ BUILT-IN SKILLS:
 SKILL TYPES:
   tskill   Database table (fields, validators, presenters)
   cskill   Code skill (LLM-generated code execution)
-  iskill   Interactive (commands, user prompts)
+  cgskill  Code generation (text/code or module)
   oskill   Orchestrator (routes to other skills)
   mskill   MCP tool integration
 

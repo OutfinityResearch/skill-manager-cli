@@ -1,6 +1,6 @@
 # Execute Skill
 
-## Summary
+## Description
 Executes a user skill and returns its output.
 
 ## Prompt

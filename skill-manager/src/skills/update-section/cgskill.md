@@ -2,7 +2,7 @@
 
 Updates a specific section in a skill definition file.
 
-## Summary
+## Description
 Modifies or adds a section (## heading) in a skill file without rewriting the entire file.
 
 ## Prompt

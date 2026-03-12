@@ -34,12 +34,13 @@ Success output:
 ```
 Found N user skill(s):
 
+
 [type] skillName
-   Summary: Skill summary text
+   Description: Skill description text
    Path: /path/to/skill/directory
 
 [type] anotherSkill
-   Summary: Another summary
+   Description: Another description
    Path: /path/to/another/skill
 ```
 

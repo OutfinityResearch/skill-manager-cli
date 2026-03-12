@@ -56,7 +56,7 @@ export async function action(recursiveSkilledAgent, prompt) {
         return 'Error: skillName is required';
     }
     if (!section) {
-        return 'Error: section is required (e.g., "Summary", "Instructions")';
+        return 'Error: section is required (e.g., "Description", "Instructions")';
     }
     if (newContent === undefined || newContent === null) {
         return 'Error: content is required';

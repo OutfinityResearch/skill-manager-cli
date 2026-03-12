@@ -2,7 +2,7 @@
 
 Validates a skill file against its schema.
 
-## Summary
+## Description
 Checks if a skill definition has all required sections and follows the correct format for its type.
 
 ## Prompt

@@ -383,7 +383,7 @@ export class SlashCommandHandler {
 
                 // For /template, suggest skill types
                 if (command === 'template') {
-                    const types = ['tskill', 'cskill', 'cgskill', 'iskill', 'oskill', 'mskill', 'claude'];
+                    const types = ['tskill', 'cskill', 'cgskill', 'oskill', 'mskill', 'claude'];
                     const matchingTypes = types
                         .filter(t => t.startsWith(argPrefix))
                         .map(t => `/${command} ${t}`);
@@ -404,7 +404,7 @@ export class SlashCommandHandler {
                 if (command === 'write' && args.includes(' ')) {
                     const parts = args.split(/\s+/);
                     const typePrefix = parts[1]?.toLowerCase() || '';
-                    const types = ['tskill', 'cskill', 'cgskill', 'iskill', 'oskill', 'mskill', 'claude'];
+                    const types = ['tskill', 'cskill', 'cgskill', 'oskill', 'mskill', 'claude'];
                     const matchingTypes = types
                         .filter(t => t.startsWith(typePrefix))
                         .map(t => `/${command} ${parts[0]} ${t}`);

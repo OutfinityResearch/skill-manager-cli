@@ -2,7 +2,7 @@
 
 Tests generated code by importing and running it.
 
-## Summary
+## Description
 Loads and tests generated .mjs code for a skill, optionally with test input.
 
 ## Prompt

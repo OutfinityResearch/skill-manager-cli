@@ -197,102 +197,6 @@ Generate ONLY the JavaScript code, no markdown code blocks, no explanations.`;
 }
 
 /**
- * Build the prompt for code generation from an iskill definition
- * @param {string} skillName - The name of the skill
- * @param {string} content - The full skill definition content
- * @param {Object} sections - Parsed sections from the skill definition
- * @param {string|null} specsContent - Optional .specs.md content
- * @returns {string} The prompt for the LLM
- */
-export function buildIskillCodeGenPrompt(skillName, content, sections, specsContent = null) {
-    const specsBlock = specsContent ? `
-## Skill Specifications
-${specsContent}
-
----
-` : '';
-
-    return `Generate JavaScript/ESM code for an interactive skill based on this definition.
-
-## Skill Name: ${skillName}
-${specsBlock}
-## Skill Definition:
-${content}
-
-## Requirements:
-1. Generate clean, modern ESM code (export functions and objects, no CommonJS)
-2. Export a \`specs\` object containing skill metadata and argument definitions
-3. Export an async \`action\` function that implements the skill logic
-4. The action function should use the LLM when appropriate via context.llmAgent
-
-## Expected Structure:
-
-\`\`\`javascript
-/**
- * ${skillName} - Interactive Skill
- * [Description from the skill definition]
- */
-
-export const specs = {
-    name: '${skillName}',
-    description: '[From Summary section]',
-    needConfirmation: false, // Set to false if "needConfirmation: false" in Settings section
-    arguments: {
-        // Each argument from "Commands" or "Arguments" section
-        // Arguments in square brackets like [topic] are optional (required: false)
-        argumentName: {
-            description: 'What this argument is for',
-            type: 'string', // optional: string, number, boolean, date
-            required: true, // false if argument is in square brackets like [argName]
-            // Optional properties:
-            // validator: (value) => error string or null,
-            // enumerator: async () => ['option1', 'option2'],
-            // llmHint: 'Hint for LLM when collecting this argument',
-        },
-    },
-};
-
-export async function action(args, options = {}) {
-    const { llmAgent, contextManager } = options;
-
-    // Extract arguments
-    const { arg1, arg2 } = args;
-
-    // Implement skill logic
-    // Use llmAgent.executePrompt() if LLM interaction is needed
-
-    // Return result string or object
-    return 'Result of the skill execution';
-}
-
-export default { specs, action };
-\`\`\`
-
-## Prompt Section Interpretation:
-The "## Prompt" section in the skill definition tells the LLM HOW to behave when executing.
-If present, use it as the system prompt when calling llmAgent.executePrompt().
-
-## Code Style:
-- Use arrow functions for simple operations
-- Use async/await for LLM calls
-- Handle missing arguments gracefully
-- Return meaningful results
-- Include JSDoc comments
-
-## Important:
-- Parse the "Commands" or "Arguments" section to build the arguments object
-- Arguments in square brackets like [topic] are OPTIONAL (required: false)
-- Use the "Prompt" section content as guidance for the action implementation
-- If the skill needs LLM, call: await llmAgent.executePrompt(prompt, { mode: 'fast' })
-- Parse the "Settings" section for configuration:
-  - If "needConfirmation: false" is present, set specs.needConfirmation = false
-  - This allows the skill to execute immediately without user confirmation
-- Parse the "Instructions" section for execution behavior guidance
-
-Generate ONLY the JavaScript code, no markdown code blocks, no explanations.`;
-}
-
-/**
  * Build the prompt for code generation from an oskill (orchestrator) definition
  * @param {string} skillName - The name of the skill
  * @param {string} content - The full skill definition content
@@ -320,7 +224,7 @@ ${content}
 2. Export a \`specs\` object containing skill metadata
 3. Export an async \`action\` function that handles orchestration logic
 4. Parse "Allowed-Skills" section to know which skills can be called
-5. Parse "Intents" section to understand routing patterns
+5. Parse "Description" section to understand routing patterns
 6. Use the "Instructions" section as guidance for the LLM when routing
 
 ## Expected Structure:
@@ -333,11 +237,11 @@ ${content}
 
 export const specs = {
     name: '${skillName}',
-    description: '[From Summary section]',
+    description: '[From Description section]',
     type: 'orchestrator',
     allowedSkills: ['skill1', 'skill2'], // From Allowed-Skills section
     intents: {
-        // From Intents section
+        // From Description section
         intentName: 'Description of this intent',
     },
 };
@@ -476,7 +380,6 @@ Generate ONLY the JavaScript code, no markdown code blocks, no explanations.`;
 
 export default {
     buildCodeGenPrompt,
-    buildIskillCodeGenPrompt,
     buildOskillCodeGenPrompt,
     buildCskillCodeGenPrompt,
 };

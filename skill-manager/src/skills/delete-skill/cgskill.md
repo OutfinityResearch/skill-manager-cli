@@ -2,7 +2,7 @@
 
 Deletes a skill directory and all its contents.
 
-## Summary
+## Description
 Removes a skill directory including all definition files and generated code.
 
 ## Prompt

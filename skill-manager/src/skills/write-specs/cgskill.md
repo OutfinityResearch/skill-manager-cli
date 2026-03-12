@@ -2,7 +2,7 @@
 
 Creates or updates a skill's .specs.md specification file.
 
-## Summary
+## Description
 Creates or updates the .specs.md file for a skill. This file contains code generation prompts, validation requirements, and other specifications.
 
 ## Prompt

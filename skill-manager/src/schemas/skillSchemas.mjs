@@ -21,32 +21,25 @@ export const SKILL_TYPES = {
         requiredSections: ['Description', 'Input Format', 'Output Format'],
         optionalSections: ['Constraints', 'Examples'],
     },
-    iskill: {
-        fileName: 'iskill.md',
-        generatedFileName: null,
-        description: 'Interactive skill - conversational commands with user input',
-        requiredSections: ['Summary', 'Commands'],
-        optionalSections: ['Roles', 'Session Storage'],
-    },
     oskill: {
         fileName: 'oskill.md',
         generatedFileName: null,
         description: 'Orchestrator skill - routes intents to other skills',
         requiredSections: ['Instructions', 'Allowed Skills'],
-        optionalSections: ['Intent Recognition', 'Routing Logic', 'Fallback Behavior'],
+        optionalSections: ['Description', 'Routing Logic', 'Fallback Behavior'],
     },
     mskill: {
         fileName: 'mskill.md',
         generatedFileName: null,
         description: 'MCP skill - uses Model Context Protocol tools',
-        requiredSections: ['Summary', 'MCP Tools'],
+        requiredSections: ['Description', 'MCP Tools'],
         optionalSections: ['Configuration'],
     },
     cgskill: {
         fileName: 'cgskill.md',
         generatedFileName: null,
         description: 'Code generation skill - LLM decides text/code or uses hand-written module',
-        requiredSections: ['Summary', 'Prompt'],
+        requiredSections: ['Description', 'Prompt'],
         optionalSections: ['Argument', 'LLM-Mode', 'Examples'],
     },
     claude: {
@@ -185,40 +178,6 @@ Must be one of the enumerated values.
 - **Expected Output**: \`{ "result": "..." }\`
 `,
 
-    iskill: `# [Skill Name]
-
-## Summary
-[One-line description of this interactive skill]
-
-## Commands
-
-### command_name <arg1> [arg2]
-- Description: [What this command does]
-- Arguments:
-  - arg1 (required): [Description]
-  - arg2 (optional): [Description]
-- Example: \`command_name value1 value2\`
-
-### another_command
-- Description: [What this command does]
-- Aliases: ["alt_name", "shortcut"]
-- Example: \`another_command\`
-
-## Roles
-
-### admin
-- Description: Full access to all commands
-- Capabilities: [list of allowed commands]
-
-### user
-- Description: Limited access
-- Capabilities: [list of allowed commands]
-
-## Session Storage
-- current_context: Stores the active working context
-- history: Recent command history (max 10 entries)
-`,
-
     oskill: `# [Orchestrator Name]
 
 ## Instructions
@@ -230,7 +189,7 @@ This orchestrator routes user intents to the appropriate skills.
 - skill_name_2: [When to use this skill]
 - skill_name_3: [When to use this skill]
 
-## Intent Recognition
+## Description
 
 ### Intent Category 1
 - Keywords: ["keyword1", "keyword2"]
@@ -268,7 +227,7 @@ When intent is unclear:
 
     mskill: `# [MCP Skill Name]
 
-## Summary
+## Description
 [One-line description of this MCP skill]
 
 ## MCP Tools
@@ -299,7 +258,7 @@ When intent is unclear:
 
     cgskill: `# [Skill Name]
 
-## Summary
+## Description
 [One-line description of what this skill does]
 
 ## Prompt
@@ -396,14 +355,6 @@ export function detectSkillType(content) {
         return 'oskill';
     }
 
-    // Check for interactive indicators (iskill)
-    // iskill uses "## Required Arguments" or "## Arguments" for parameter collection
-    if (contentLower.includes('## required arguments') ||
-        (contentLower.includes('## commands') &&
-            (contentLower.includes('## roles') || contentLower.includes('## session')))) {
-        return 'iskill';
-    }
-
     // Check for MCP indicators (mskill)
     if (contentLower.includes('## mcp tools') ||
         contentLower.includes('### server connection')) {
@@ -415,8 +366,8 @@ export function detectSkillType(content) {
         return 'cskill';
     }
 
-    // Check for code generation skill (cgskill) - has Summary and Prompt
-    if (contentLower.includes('## summary') && contentLower.includes('## prompt')) {
+    // Check for code generation skill (cgskill) - has Description and Prompt
+    if (contentLower.includes('## description') && contentLower.includes('## prompt')) {
         return 'cgskill';
     }
 

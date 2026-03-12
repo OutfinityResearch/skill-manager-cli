@@ -4,12 +4,11 @@ Generates executable .mjs code from skill definition files.
 
 ## Overview
 
-This module generates JavaScript code from skill definitions (tskill, iskill, oskill, cskill) using LLM. It supports timestamp-based caching to avoid unnecessary regeneration and automatically runs associated tests after generation.
+This module generates JavaScript code from skill definitions (tskill, oskill, cskill) using LLM. It supports timestamp-based caching to avoid unnecessary regeneration and automatically runs associated tests after generation.
 
 ## Supported Skill Types
 
 - tskill: Database table skills → tskill.generated.mjs
-- iskill: Interactive skills → skillname.generated.mjs
 - oskill: Orchestrator skills → skillname.generated.mjs
 - cskill: Code skills → skillname.generated.mjs
 
@@ -103,7 +102,7 @@ Error: Skill "name" not found
 
 Unsupported type:
 ```
-Error: Code generation is only supported for: tskill, iskill, oskill, cskill.
+Error: Code generation is only supported for: tskill, oskill, cskill.
 This skill is type: unknown
 ```
 

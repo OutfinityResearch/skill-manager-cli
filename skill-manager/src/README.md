@@ -84,7 +84,7 @@ skill-manager "read the equipment skill"
 skill-manager "create a tskill called inventory with fields: item_id, name, quantity, location"
 
 # Update a section
-skill-manager "update the Summary section of inventory to say 'Tracks warehouse inventory'"
+skill-manager "update the Description section of inventory to say 'Tracks warehouse inventory'"
 
 # Validate
 skill-manager "validate inventory"
@@ -187,36 +187,16 @@ LLM generates and executes code based on instructions.
 ```markdown
 # Data Parser
 
-## Summary
+## Description
 Parses CSV and JSON data files.
 
-## Prompt
-You are a data parsing assistant...
+## Input Format
+- **input**: CSV or JSON text
 
-## LLM Mode
-fast
+## Output Format
+- **Type**: `object`
 ```
 
-### iskill (Interactive)
-
-Defines conversational commands with user input.
-
-```markdown
-# Authentication
-
-## Summary
-Handles user authentication.
-
-## Commands
-
-### login <username>
-- Description: Log in as user
-
-## Roles
-
-### admin
-- Capabilities: [all]
-```
 
 ### oskill (Orchestrator)
 

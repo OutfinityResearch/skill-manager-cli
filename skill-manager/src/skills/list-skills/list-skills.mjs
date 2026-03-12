@@ -74,10 +74,11 @@ export async function action(recursiveSkilledAgent, prompt) {
     const output = filtered.map(s => {
         const toolName = `execute_${Sanitiser.sanitiseName(s.name).replace(/-/g, '_')}`;
         const descriptorSections = s.descriptor?.sections || {};
-        const description = s.type === 'cskill'
+        const usesDescription = ['cskill', 'cgskill', 'mskill', 'oskill'].includes(s.type);
+        const description = usesDescription
             ? (descriptorSections.description || 'No description')
             : (s.descriptor?.summary || 'No summary');
-        const label = s.type === 'cskill' ? 'Description' : 'Summary';
+        const label = usesDescription ? 'Description' : 'Summary';
         return [
             `[${s.type}] ${s.shortName || s.name}`,
             `   ${label}: ${description}`,

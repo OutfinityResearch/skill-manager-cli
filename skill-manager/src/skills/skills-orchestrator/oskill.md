@@ -69,7 +69,7 @@ You are a Skill Manager orchestrator that manages skill DEFINITION FILES (.md fi
 ```json
 {
   "plan": [
-    {"skill": "write-skill", "input": "{\"skillName\":\"calculator\",\"fileName\":\"cskill.md\",\"content\":\"# Calculator\\n\\n## Summary\\nPerforms calculations.\\n\\n## Prompt\\nEvaluate the given expression.\\n\\n## Arguments\\n- expression: The expression to evaluate\\n\\n## LLM-Mode\\nfast\"}", "reason": "Create skill with basic template"}
+    {"skill": "write-skill", "input": "{\"skillName\":\"calculator\",\"fileName\":\"cskill.md\",\"content\":\"# Calculator\\n\\n## Description\\nPerforms calculations.\\n\\n## Input Format\\n- **expression**: The expression to evaluate\\n\\n## Output Format\\n- **Type**: \\\"number\\\"\"}", "reason": "Create skill with basic template"}
   ]
 }
 ```
@@ -238,7 +238,7 @@ When the user wants to interact with the filesystem or run shell commands, use t
 
 **Workflow for Updating a Skill:**
 1. Use read-skill to see the current definition
-2. Identify which section needs changes (Summary, Prompt, Instructions, etc.)
+2. Identify which section needs changes (Description, Prompt, Instructions, etc.)
 3. Use update-section to modify that section
 4. Optionally validate-skill to check the result
 
@@ -266,7 +266,7 @@ When the user wants to interact with the filesystem or run shell commands, use t
 - bash
 - *
 
-## Intents
+## Description
 - list: Show available skills in the catalog
 - read: View the content of a skill definition
 - create: Create a new skill from template

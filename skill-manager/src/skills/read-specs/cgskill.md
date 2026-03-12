@@ -2,7 +2,7 @@
 
 Reads a skill's .specs.md specification file.
 
-## Summary
+## Description
 Reads and returns the content of a skill's .specs.md file, which contains code generation prompts and validation requirements.
 
 ## Prompt

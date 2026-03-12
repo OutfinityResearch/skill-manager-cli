@@ -2,10 +2,9 @@
 
 Generates test files for skills.
 
-## Summary
+## Description
 Uses LLM to generate comprehensive test files for skills:
 - **tskill**: Tests validators, presenters, resolvers, enumerators
-- **iskill**: Tests specs and action function behavior
 - **oskill**: Tests routing logic and orchestration
 - **cskill**: Tests action function with various inputs
 
