@@ -9,7 +9,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { LineEditor } from '../ui/LineEditor.mjs';
 import { createSpinner } from '../ui/spinner.mjs';
-import { buildCommandList, showTestSelector, showHelpSelector } from '../ui/CommandSelector.mjs';
+import { buildCommandList, showTestSelector, showHelpSelector, showTierSelector, showModelSelector } from '../ui/CommandSelector.mjs';
 import { SlashCommandHandler } from './SlashCommandHandler.mjs';
 import { summarizeResult } from '../ui/ResultFormatter.mjs';
 import { HistoryManager } from './HistoryManager.mjs';
@@ -18,10 +18,22 @@ import { InteractivePrompt } from './InteractivePrompt.mjs';
 import { QuickCommands } from './QuickCommands.mjs';
 import { NaturalLanguageProcessor } from './NaturalLanguageProcessor.mjs';
 import { discoverSkillTests, runTestFile, runTestSuite } from '../lib/testDiscovery.mjs';
+import { TIERS } from '../lib/constants.mjs';
 import { formatTestResult, formatSuiteResults } from '../ui/TestResultFormatter.mjs';
 import { showHelp, getHelpTopics, getCommandHelp } from '../ui/HelpSystem.mjs';
 import { UIContext } from '../ui/UIContext.mjs';
 import { BUILT_IN_SKILLS } from '../lib/constants.mjs';
+
+// Import tier/model utilities from achillesAgentLib (direct path — not re-exported from index)
+let _listTiersFromCache = null;
+let _listModelsFromCache = null;
+try {
+    const llmClient = await import('achillesAgentLib/utils/LLMClient.mjs');
+    _listTiersFromCache = llmClient.listTiersFromCache;
+    _listModelsFromCache = llmClient.listModelsFromCache;
+} catch {
+    // achillesAgentLib not available — tier commands will show an error
+}
 
 /**
  * REPLSession class for managing interactive CLI sessions.
@@ -37,6 +49,7 @@ export class REPLSession {
      * @param {string} [options.builtInSkillsDir] - Built-in skills directory (for filtering user skills)
      * @param {HistoryManager} [options.historyManager] - Command history manager (created if not provided)
      * @param {boolean} [options.debug] - Enable debug mode
+     * @param {string} [options.tier] - Initial LLM tier (default: 'fast')
      */
     constructor(agent, options = {}) {
         this.agent = agent;
@@ -47,6 +60,12 @@ export class REPLSession {
         this.skillsDir = options.skillsDir || path.join(this.workingDir, 'skills');
         this.builtInSkillsDir = options.builtInSkillsDir || null;
         this.debug = options.debug || false;
+
+        // Active LLM tier for all prompt executions
+        this.activeTier = options.tier || TIERS.FAST;
+
+        // Pinned model (bypasses tier cascade when set)
+        this.pinnedModel = null;
 
         // History manager
         this.historyManager = options.historyManager || new HistoryManager({
@@ -167,11 +186,16 @@ export class REPLSession {
      */
     async _executeSkill(skillName, input, opts = {}) {
         this._logEnvSnapshot(`execute-skill:${skillName}`);
-        return this.agent.executePrompt(input, {
+        const execOpts = {
             skillName,
             context: this.context,
+            tier: this.activeTier,
             ...opts,
-        });
+        };
+        if (this.pinnedModel) {
+            execOpts.model = this.pinnedModel;
+        }
+        return this.agent.executePrompt(input, execOpts);
     }
 
     /**
@@ -199,11 +223,16 @@ export class REPLSession {
         const { skillName = BUILT_IN_SKILLS.ORCHESTRATOR, ...restOptions } = opts;
 
         this._logEnvSnapshot(`process-prompt:${skillName}`);
-        let result = await this.agent.executePrompt(userPrompt, {
+        const execOpts = {
             skillName,
             context: this.context,
+            tier: this.activeTier,
             ...restOptions,
-        });
+        };
+        if (this.pinnedModel) {
+            execOpts.model = this.pinnedModel;
+        }
+        let result = await this.agent.executePrompt(userPrompt, execOpts);
 
         // If result is a JSON string, parse it to get the object
         if (typeof result === 'string') {
@@ -268,18 +297,29 @@ export class REPLSession {
         const shortWorkDir = this.workingDir.replace(process.env.HOME, '~');
         console.log(`  ${style('cwd', 'cyan')}  ${shortWorkDir}`);
 
-        // Show LLM model info
+        // Show LLM tier and model info
         try {
-            const description = this.agent.llmAgent.invokerStrategy?.describe?.();
-            if (description) {
-                const orchestratorMode = process.env.ACHILLES_ORCHESTRATOR_MODE || 'fast';
-                const models = orchestratorMode === 'deep' ? description.deepModels : description.fastModels;
-                const primaryModel = models?.[0]?.name || 'unknown';
-                const modeColor = orchestratorMode === 'deep' ? 'magenta' : 'green';
-                console.log(`  ${style('llm', 'cyan')}  ${primaryModel} ${style(`[${orchestratorMode}]`, modeColor)}`);
+            if (this.pinnedModel) {
+                console.log(`  ${style('llm', 'cyan')}  ${this.pinnedModel} ${style('[pinned]', 'yellow')}`);
+            } else {
+                const tierModels = _listTiersFromCache?.();
+                const tierModelList = tierModels?.[this.activeTier];
+                const primaryModel = tierModelList?.[0] || 'unknown';
+                const tierColor = [TIERS.DEEP, TIERS.ULTRA].includes(this.activeTier) ? 'magenta' : 'green';
+                console.log(`  ${style('llm', 'cyan')}  ${primaryModel} ${style(`[${this.activeTier}]`, tierColor)}`);
             }
         } catch (e) {
-            // Ignore errors getting model info
+            // Fallback to legacy mode display
+            try {
+                const description = this.agent.llmAgent.invokerStrategy?.describe?.();
+                if (description) {
+                    const models = this.activeTier === TIERS.DEEP ? description.deepModels : description.fastModels;
+                    const primaryModel = models?.[0]?.name || 'unknown';
+                    console.log(`  ${style('llm', 'cyan')}  ${primaryModel} ${style(`[${this.activeTier}]`, 'green')}`);
+                }
+            } catch {
+                // Ignore
+            }
         }
 
         // Skills summary
@@ -415,8 +455,30 @@ export class REPLSession {
                     console.log('\nGoodbye!\n');
                     return true; // Signal to exit the REPL
                 }
+                // Handle /tier command
+                if (result.tierChange) {
+                    this.activeTier = result.tierChange;
+                    this.pinnedModel = null; // Clear model pin on tier switch
+                    const tierModels = _listTiersFromCache?.() || {};
+                    const models = tierModels[this.activeTier] || [];
+                    const primaryModel = models[0] || 'unknown';
+                    spinner.succeed(`Tier: ${this.activeTier} → ${primaryModel}${models.length > 1 ? ` (+${models.length - 1} fallback${models.length > 2 ? 's' : ''})` : ''}`);
+                } else if (result.showTierPicker) {
+                    spinner.stop();
+                    await this._handleTierPicker();
+                // Handle /model command
+                } else if (result.showModelPicker) {
+                    spinner.stop();
+                    await this._handleModelPicker();
+                } else if (result.hasOwnProperty('modelChange')) {
+                    this.pinnedModel = result.modelChange;
+                    if (this.pinnedModel) {
+                        spinner.succeed(`Model pinned: ${this.pinnedModel}`);
+                    } else {
+                        spinner.succeed('Model pin cleared — using tier-based selection');
+                    }
                 // Handle /raw toggle command
-                if (result.toggleMarkdown) {
+                } else if (result.toggleMarkdown) {
                     this.markdownEnabled = !this.markdownEnabled;
                     spinner.succeed(`Markdown rendering ${this.markdownEnabled ? 'enabled' : 'disabled'}`);
                 // Handle /test with no args - show interactive picker
@@ -657,6 +719,60 @@ export class REPLSession {
 
         // Save to history
         this.historyManager.add(`/help ${topicName}`);
+    }
+
+    /**
+     * Handle interactive tier picker when /tier is called without args.
+     * @private
+     */
+    async _handleTierPicker() {
+        const tiers = _listTiersFromCache?.();
+        if (!tiers || Object.keys(tiers).length === 0) {
+            console.log('\nNo tiers available.\n');
+            return;
+        }
+
+        const selected = await showTierSelector(tiers, this.activeTier, {
+            theme: UIContext.getTheme(),
+        });
+
+        if (!selected) {
+            return;
+        }
+
+        this.activeTier = selected.name;
+        this.pinnedModel = null; // Clear model pin on tier switch
+
+        const models = tiers[this.activeTier] || [];
+        const primaryModel = models[0] || 'unknown';
+        console.log(`Tier: ${this.activeTier} → ${primaryModel}${models.length > 1 ? ` (+${models.length - 1} fallback${models.length > 2 ? 's' : ''})` : ''}`);
+
+        this.historyManager.add(`/tier ${this.activeTier}`);
+    }
+
+    /**
+     * Handle interactive model picker when /model is called without args.
+     * @private
+     */
+    async _handleModelPicker() {
+        const tiers = _listTiersFromCache?.();
+        if (!tiers || Object.keys(tiers).length === 0) {
+            console.log('\nNo models available.\n');
+            return;
+        }
+
+        const selected = await showModelSelector(tiers, {
+            theme: UIContext.getTheme(),
+        });
+
+        if (!selected) {
+            return;
+        }
+
+        this.pinnedModel = selected.name;
+        console.log(`Model pinned: ${this.pinnedModel}`);
+
+        this.historyManager.add(`/model ${this.pinnedModel}`);
     }
 
     async _promptWithBox(prompt, colors) {

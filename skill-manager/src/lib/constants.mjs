@@ -37,8 +37,88 @@ export const BUILT_IN_SKILLS = {
   EXECUTE: 'execute-skill',
   SKILL_REFINER: 'skill-refiner',
 
+  // Documentation scaffolding
+  SCAFFOLD_DOC: 'scaffold-doc-skill',
+
   // Orchestrators
   ORCHESTRATOR: 'skills-orchestrator',
+};
+
+/**
+ * Skill type name strings
+ * Use these instead of hardcoding type names like 'tskill', 'cskill', etc.
+ */
+export const SKILL_TYPE_NAMES = {
+  TSKILL: 'tskill',
+  CSKILL: 'cskill',
+  OSKILL: 'oskill',
+  MSKILL: 'mskill',
+  DCGSKILL: 'dcgskill',
+  CLAUDE: 'claude',
+};
+
+/**
+ * Get all skill type names as an array
+ * @returns {string[]}
+ */
+export function getAllSkillTypeNames() {
+  return Object.values(SKILL_TYPE_NAMES);
+}
+
+/**
+ * Documentation scaffold type names
+ */
+export const DOC_SCAFFOLD_TYPES = [
+  'doc-scientific',
+  'doc-eu-deliverable',
+  'doc-technical',
+  'doc-book',
+  'doc-review',
+];
+
+/**
+ * Well-known file names used across the codebase
+ */
+export const FILE_NAMES = {
+  SPECS: '.specs.md',
+  HISTORY: '.skill-manager-history',
+  TSKILL_GENERATED: 'tskill.generated.mjs',
+};
+
+/**
+ * Generated file extensions
+ */
+export const FILE_EXTENSIONS = {
+  GENERATED_MJS: '.generated.mjs',
+  GENERATED_JS: '.generated.js',
+};
+
+/**
+ * UI style/theme identifiers
+ */
+export const UI_STYLES = {
+  CLAUDE_CODE: 'claude-code',
+  MINIMAL: 'minimal',
+};
+
+/**
+ * LLM execution tier names
+ */
+export const TIERS = {
+  FAST: 'fast',
+  PLAN: 'plan',
+  WRITE: 'write',
+  CODE: 'code',
+  DEEP: 'deep',
+  ULTRA: 'ultra',
+};
+
+/**
+ * LLM response shape identifiers
+ */
+export const RESPONSE_SHAPES = {
+  CODE: 'code',
+  JSON: 'json',
 };
 
 /**
@@ -60,8 +140,8 @@ export const CONFIG_VERSION = 1;
  * Default configuration values
  */
 export const DEFAULTS = {
-  UI_STYLE: 'claude-code',
-  ORCHESTRATOR_MODE: 'fast',
+  UI_STYLE: UI_STYLES.CLAUDE_CODE,
+  ORCHESTRATOR_MODE: TIERS.FAST,
   HISTORY_MAX_ENTRIES: 1000,
   MAX_VISIBLE_ITEMS: 15,
 };

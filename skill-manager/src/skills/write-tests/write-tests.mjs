@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { detectSkillType, parseSkillSections, loadSpecsContent } from '../../schemas/skillSchemas.mjs';
+import { SKILL_TYPE_NAMES, FILE_NAMES, FILE_EXTENSIONS, TIERS, RESPONSE_SHAPES } from '../../lib/constants.mjs';
 
 /**
  * Parse input to extract skillName and options
@@ -48,8 +49,8 @@ function parseInput(prompt) {
 function readGeneratedCode(skillDir, skillType, skillName) {
     // Try different generated file patterns
     const patterns = [
-        path.join(skillDir, 'tskill.generated.mjs'),
-        path.join(skillDir, `${skillName}.generated.mjs`),
+        path.join(skillDir, FILE_NAMES.TSKILL_GENERATED),
+        path.join(skillDir, `${skillName}${FILE_EXTENSIONS.GENERATED_MJS}`),
         path.join(skillDir, `${skillName}.mjs`),
     ];
 
@@ -370,7 +371,7 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     // Build prompt based on skill type
     let testGenPrompt;
-    if (skillType === 'tskill') {
+    if (skillType === SKILL_TYPE_NAMES.TSKILL) {
         testGenPrompt = buildTskillTestPrompt(skillName, definition, sections, generatedCode, specsContent);
     } else {
         testGenPrompt = buildCodeSkillTestPrompt(skillName, skillType, definition, sections, generatedCode, specsContent);
@@ -379,8 +380,8 @@ export async function action(recursiveSkilledAgent, prompt) {
     // Generate tests using LLM
     try {
         let generatedTests = await llmAgent.executePrompt(testGenPrompt, {
-            responseShape: 'code',
-            mode: 'deep',
+            responseShape: RESPONSE_SHAPES.CODE,
+            mode: TIERS.CODE,
         });
 
         // Clean up response - remove markdown code blocks if present

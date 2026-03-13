@@ -13,6 +13,7 @@ import { LoopAgentSession } from 'achillesAgentLib/LLMAgents/AgenticSession.mjs'
 import { detectSkillType, loadSpecsContent } from '../../schemas/skillSchemas.mjs';
 import { buildSystemPrompt, buildEvaluationPrompt } from './skillRefiner.prompts.mjs';
 import { runTestFile } from '../../lib/testDiscovery.mjs';
+import { TIERS, RESPONSE_SHAPES } from '../../lib/constants.mjs';
 import { formatTestResult } from '../../ui/TestResultFormatter.mjs';
 
 /**
@@ -235,8 +236,8 @@ function buildTools(recursiveSkilledAgent, skillName, skillInfo, requirements, s
 
                 try {
                     const response = await llmAgent.executePrompt(evalPrompt, {
-                        responseShape: 'json',
-                        mode: 'fast',
+                        responseShape: RESPONSE_SHAPES.JSON,
+                        mode: TIERS.FAST,
                     });
 
                     const evaluation = typeof response === 'string' ? JSON.parse(response) : response;
@@ -315,7 +316,7 @@ export async function action(recursiveSkilledAgent, prompt) {
         options: {
             maxStepsPerTurn: maxIterations * 4, // Allow multiple tool calls per iteration
             maxErrors: 5,
-            mode: 'deep',
+            mode: TIERS.CODE,
             systemPrompt,
         }
     });

@@ -14,8 +14,10 @@ import {
 } from './codeGeneration.prompts.mjs';
 import { runTestFile } from '../../lib/testDiscovery.mjs';
 import { formatTestResult } from '../../ui/TestResultFormatter.mjs';
+import { parseSkillName } from '../../lib/InputParser.mjs';
+import { SKILL_TYPE_NAMES, FILE_NAMES, FILE_EXTENSIONS, TIERS, RESPONSE_SHAPES } from '../../lib/constants.mjs';
 
-const SUPPORTED_TYPES = ['tskill', 'oskill', 'cskill'];
+const SUPPORTED_TYPES = [SKILL_TYPE_NAMES.TSKILL, SKILL_TYPE_NAMES.OSKILL, SKILL_TYPE_NAMES.CSKILL];
 
 /**
  * Check if regeneration is needed by comparing file modification times.
@@ -62,18 +64,7 @@ export async function action(recursiveSkilledAgent, prompt) {
     // Get llmAgent from the recursiveSkilledAgent
     const llmAgent = recursiveSkilledAgent?.llmAgent;
 
-    // Parse skill name
-    let skillName = null;
-    if (typeof prompt === 'string') {
-        try {
-            const parsed = JSON.parse(prompt);
-            skillName = parsed.skillName || parsed.name;
-        } catch (e) {
-            skillName = prompt.trim();
-        }
-    } else if (prompt && typeof prompt === 'object') {
-        skillName = prompt.skillName || prompt.name;
-    }
+    const skillName = parseSkillName(prompt);
 
     if (!skillName) {
         return 'Error: skillName is required. Usage: generate-code <skillName>';
@@ -103,13 +94,13 @@ export async function action(recursiveSkilledAgent, prompt) {
     }
 
     // Determine output file path
-    const outFileName = skillType === 'tskill'
-        ? 'tskill.generated.mjs'
-        : `${skillName}.generated.mjs`;
+    const outFileName = skillType === SKILL_TYPE_NAMES.TSKILL
+        ? FILE_NAMES.TSKILL_GENERATED
+        : `${skillName}${FILE_EXTENSIONS.GENERATED_MJS}`;
     const outPath = path.join(skillDir, outFileName);
 
     // Build list of source files to check (skill definition + optional specs)
-    const specsPath = path.join(skillDir, '.specs.md');
+    const specsPath = path.join(skillDir, FILE_NAMES.SPECS);
     const sourcePaths = [filePath];
     if (fs.existsSync(specsPath)) {
         sourcePaths.push(specsPath);
@@ -134,13 +125,13 @@ export async function action(recursiveSkilledAgent, prompt) {
     // Generate code using LLM with appropriate prompt based on skill type
     let codeGenPrompt;
     switch (skillType) {
-        case 'tskill':
+        case SKILL_TYPE_NAMES.TSKILL:
             codeGenPrompt = buildCodeGenPrompt(skillName, content, sections, specsContent);
             break;
-        case 'oskill':
+        case SKILL_TYPE_NAMES.OSKILL:
             codeGenPrompt = buildOskillCodeGenPrompt(skillName, content, sections, specsContent);
             break;
-        case 'cskill':
+        case SKILL_TYPE_NAMES.CSKILL:
             codeGenPrompt = buildCskillCodeGenPrompt(skillName, content, sections, specsContent);
             break;
         default:
@@ -149,8 +140,8 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     try {
         let generatedCode = await llmAgent.executePrompt(codeGenPrompt, {
-            responseShape: 'code',
-            mode: 'deep',
+            responseShape: RESPONSE_SHAPES.CODE,
+            mode: TIERS.CODE,
         });
 
         // Clean up response - remove markdown code blocks if present

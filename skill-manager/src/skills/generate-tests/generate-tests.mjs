@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { detectSkillType, parseSkillSections } from '../../schemas/skillSchemas.mjs';
+import { SKILL_TYPE_NAMES, TIERS, RESPONSE_SHAPES } from '../../lib/constants.mjs';
 
 /**
  * Parse input to extract skillName and options
@@ -342,7 +343,7 @@ export async function action(recursiveSkilledAgent, prompt) {
 
     // Detect skill type - this skill is specifically for cskill
     const skillType = detectSkillType(definition);
-    if (skillType !== 'cskill') {
+    if (skillType !== SKILL_TYPE_NAMES.CSKILL) {
         return `Error: generate-tests is designed for cskill types.\n\nThis skill is type: ${skillType || 'unknown'}\n\nUse /write-tests for other skill types.`;
     }
 
@@ -394,8 +395,8 @@ export async function action(recursiveSkilledAgent, prompt) {
     // Generate tests using LLM
     try {
         let generatedTests = await llmAgent.executePrompt(testGenPrompt, {
-            responseShape: 'code',
-            mode: 'deep',
+            responseShape: RESPONSE_SHAPES.CODE,
+            mode: TIERS.CODE,
         });
 
         // Clean up response - remove markdown code blocks if present

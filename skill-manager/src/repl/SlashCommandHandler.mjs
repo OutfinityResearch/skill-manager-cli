@@ -6,7 +6,18 @@
 
 import { formatSlashResult } from '../ui/ResultFormatter.mjs';
 import { showHelp, getQuickReference } from '../ui/HelpSystem.mjs';
-import { BUILT_IN_SKILLS } from '../lib/constants.mjs';
+import { BUILT_IN_SKILLS, getAllSkillTypeNames, DOC_SCAFFOLD_TYPES } from '../lib/constants.mjs';
+
+// Import tier/model utilities from achillesAgentLib
+let _listTiersFromCache = null;
+let _listModelsFromCache = null;
+try {
+    const llmClient = await import('achillesAgentLib/utils/LLMClient.mjs');
+    _listTiersFromCache = llmClient.listTiersFromCache;
+    _listModelsFromCache = llmClient.listModelsFromCache;
+} catch {
+    // achillesAgentLib not available
+}
 
 /**
  * SlashCommandHandler class for managing slash commands in the CLI.
@@ -62,7 +73,7 @@ export class SlashCommandHandler {
         'template': {
             skill: BUILT_IN_SKILLS.GET_TEMPLATE,
             usage: '/template <type>',
-            description: 'Get blank template (tskill, cskill, cgskill, claude, etc.)',
+            description: 'Get blank template (tskill, cskill, dcgskill, claude, etc.)',
             args: 'required',
             needsSkillArg: false, // Takes type, not skill name
         },
@@ -139,6 +150,13 @@ export class SlashCommandHandler {
             args: 'required',
             needsSkillArg: true,
         },
+        'scaffold': {
+            skill: BUILT_IN_SKILLS.SCAFFOLD_DOC,
+            usage: '/scaffold <doc-type> <skill-name>',
+            description: 'Create a documentation skill with full structure (SKILL.md + resources/ + scripts/)',
+            args: 'required',
+            needsSkillArg: false,
+        },
     };
 
     /**
@@ -211,6 +229,16 @@ export class SlashCommandHandler {
         // Handle /raw - toggle markdown rendering (handled by REPLSession)
         if (command === 'raw') {
             return { handled: true, toggleMarkdown: true };
+        }
+
+        // Handle /tier [name] - show or switch LLM tier
+        if (command === 'tier') {
+            return this._handleTierCommand(args);
+        }
+
+        // Handle /model [name|clear] - pin a specific model
+        if (command === 'model') {
+            return this._handleModelCommand(args);
         }
 
         // Handle /quit and /exit - exit the REPL (handled by REPLSession)
@@ -327,6 +355,100 @@ export class SlashCommandHandler {
     }
 
     /**
+     * Get available tier names from achillesAgentLib cache.
+     * @returns {string[]}
+     */
+    getAvailableTiers() {
+        try {
+            const tiers = _listTiersFromCache?.();
+            return tiers ? Object.keys(tiers) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Get available model names from achillesAgentLib cache.
+     * @returns {string[]}
+     */
+    getAvailableModels() {
+        try {
+            const tiers = _listTiersFromCache?.();
+            if (!tiers) return [];
+            const seen = new Set();
+            for (const models of Object.values(tiers)) {
+                for (const m of models) seen.add(m);
+            }
+            return [...seen];
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Handle /tier command - show available tiers or switch tier.
+     * @param {string} args - Tier name or empty
+     * @returns {{handled: boolean, tierChange?: string, tierInfo?: string, error?: string}}
+     * @private
+     */
+    _handleTierCommand(args) {
+        const tiers = _listTiersFromCache?.();
+        if (!tiers) {
+            return { handled: true, error: 'Could not load tiers — achillesAgentLib not available' };
+        }
+
+        const tierNames = Object.keys(tiers);
+        if (!args) {
+            // No args — show interactive tier picker
+            return { handled: true, showTierPicker: true };
+        }
+
+        const requested = args.trim().toLowerCase();
+        if (!tierNames.includes(requested)) {
+            return { handled: true, error: `Unknown tier "${requested}". Available: ${tierNames.join(', ')}` };
+        }
+
+        return { handled: true, tierChange: requested };
+    }
+
+    /**
+     * Handle /model command - pin a specific model or show picker.
+     * @param {string} args - Model name, 'clear', or empty
+     * @returns {{handled: boolean, showModelPicker?: boolean, modelChange?: string|null, error?: string}}
+     * @private
+     */
+    _handleModelCommand(args) {
+        const tiers = _listTiersFromCache?.();
+        if (!tiers) {
+            return { handled: true, error: 'Could not load models — achillesAgentLib not available' };
+        }
+
+        if (!args) {
+            // No args — show interactive model picker
+            return { handled: true, showModelPicker: true };
+        }
+
+        const requested = args.trim();
+
+        // /model clear — unpin
+        if (requested.toLowerCase() === 'clear') {
+            return { handled: true, modelChange: null };
+        }
+
+        // Validate model exists in any tier
+        const allModels = new Set();
+        for (const models of Object.values(tiers)) {
+            for (const m of models) allModels.add(m);
+        }
+
+        if (!allModels.has(requested)) {
+            return { handled: true, error: `Unknown model "${requested}". Use /model to see available models.` };
+        }
+
+        return { handled: true, modelChange: requested };
+    }
+
+    /**
      * Get autocomplete suggestions for slash commands.
      * @param {string} line - Current input line
      * @returns {[string[], string]} - [completions, original line]
@@ -342,7 +464,7 @@ export class SlashCommandHandler {
                 const allCmds = Object.keys(SlashCommandHandler.COMMANDS)
                     .filter((cmd, idx, arr) => arr.indexOf(cmd) === idx) // unique
                     .map(cmd => `/${cmd}`);
-                allCmds.push('/help', '/commands');
+                allCmds.push('/help', '/commands', '/tier', '/model');
                 return [allCmds, line];
             }
 
@@ -360,10 +482,33 @@ export class SlashCommandHandler {
                 if ('help'.startsWith(cmdPrefix)) matchingCmds.push('/help');
                 if ('commands'.startsWith(cmdPrefix)) matchingCmds.push('/commands');
                 if ('raw'.startsWith(cmdPrefix)) matchingCmds.push('/raw');
+                if ('tier'.startsWith(cmdPrefix)) matchingCmds.push('/tier');
+                if ('model'.startsWith(cmdPrefix)) matchingCmds.push('/model');
                 if ('quit'.startsWith(cmdPrefix)) matchingCmds.push('/quit');
                 if ('exit'.startsWith(cmdPrefix)) matchingCmds.push('/exit');
 
                 return [matchingCmds, line];
+            }
+
+            // /tier argument completions (tier names from achillesAgentLib)
+            if (command === 'tier') {
+                const argPrefix = (args || '').toLowerCase();
+                const tierNames = this.getAvailableTiers();
+                const matching = tierNames
+                    .filter(t => t.startsWith(argPrefix))
+                    .map(t => `/tier ${t}`);
+                return [matching, line];
+            }
+
+            // /model argument completions (model names + 'clear')
+            if (command === 'model') {
+                const argPrefix = (args || '').toLowerCase();
+                const modelNames = this.getAvailableModels();
+                const options = ['clear', ...modelNames];
+                const matching = options
+                    .filter(m => m.toLowerCase().startsWith(argPrefix))
+                    .map(m => `/model ${m}`);
+                return [matching, line];
             }
 
             // Completing arguments - suggest skill names for relevant commands
@@ -381,13 +526,27 @@ export class SlashCommandHandler {
                     return [matchingSkills, line];
                 }
 
-                // For /template, suggest skill types
+                // For /template, suggest skill types and doc scaffold types
                 if (command === 'template') {
-                    const types = ['tskill', 'cskill', 'cgskill', 'oskill', 'mskill', 'claude'];
+                    const types = [...getAllSkillTypeNames(), ...DOC_SCAFFOLD_TYPES];
                     const matchingTypes = types
                         .filter(t => t.startsWith(argPrefix))
                         .map(t => `/${command} ${t}`);
                     return [matchingTypes, line];
+                }
+
+                // For /scaffold, suggest doc scaffold types (first arg only)
+                if (command === 'scaffold') {
+                    const argParts = (args || '').split(/\s+/);
+                    if (argParts.length <= 1) {
+                        const types = DOC_SCAFFOLD_TYPES;
+                        const matchingTypes = types
+                            .filter(t => t.startsWith(argParts[0] || ''))
+                            .map(t => `/${command} ${t}`);
+                        return [matchingTypes, line];
+                    }
+                    // Second arg (skill name) — no completion
+                    return [[], line];
                 }
 
                 // For /exec, suggest all skills including built-in
@@ -404,7 +563,7 @@ export class SlashCommandHandler {
                 if (command === 'write' && args.includes(' ')) {
                     const parts = args.split(/\s+/);
                     const typePrefix = parts[1]?.toLowerCase() || '';
-                    const types = ['tskill', 'cskill', 'cgskill', 'oskill', 'mskill', 'claude'];
+                    const types = getAllSkillTypeNames();
                     const matchingTypes = types
                         .filter(t => t.startsWith(typePrefix))
                         .map(t => `/${command} ${parts[0]} ${t}`);
@@ -453,6 +612,19 @@ export class SlashCommandHandler {
         // Check for /raw command
         if (command === 'raw') {
             return 'Toggle raw output (disable markdown rendering)';
+        }
+
+        // Check for /tier command
+        if (command === 'tier') {
+            if (!args) return 'Show or switch LLM tier — /tier <name>';
+            return `Switch LLM tier to "${args}"`;
+        }
+
+        // Check for /model command
+        if (command === 'model') {
+            if (!args) return 'Pin a specific model — /model <name> or /model clear';
+            if (args.toLowerCase() === 'clear') return 'Clear pinned model, return to tier-based selection';
+            return `Pin model "${args}" for this session`;
         }
 
         // Check for /quit and /exit commands

@@ -1004,4 +1004,288 @@ export async function showRepoSelector(repos, options = {}) {
     });
 }
 
+/**
+ * Show an interactive tier selector and return the selected tier
+ *
+ * @param {Object} tiers - Tiers object from listTiersFromCache() { tierName: [model1, ...] }
+ * @param {string} currentTier - Currently active tier name
+ * @param {Object} options - Options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
+ * @returns {Promise<{name: string}|null>} - Selected tier or null if cancelled
+ */
+export async function showTierSelector(tiers, currentTier, options = {}) {
+    const theme = options.theme || baseTheme;
+    const colors = theme.colors;
+    const {
+        prompt = `${colors.cyan}${colors.bold}>${colors.reset} tier: `,
+        initialFilter = '',
+        maxVisible = 10,
+    } = options;
+
+    if (!tiers || Object.keys(tiers).length === 0) {
+        return null;
+    }
+
+    // Transform tiers to command-like format
+    const tierItems = Object.entries(tiers).map(([name, models]) => {
+        const modelList = models.length > 0 ? models.join(', ') : '(no models)';
+        const current = name === currentTier ? ' [current]' : '';
+        return {
+            name,
+            description: `${modelList}${current}`,
+        };
+    });
+
+    // Calculate visible prompt length for cursor positioning
+    const visiblePromptLen = 8; // "> tier: " = 8 chars
+
+    return new Promise((resolve) => {
+        const selector = new CommandSelector(tierItems, { maxVisible, theme });
+        selector.updateFilter(initialFilter);
+
+        // Pre-select the current tier
+        const currentIdx = tierItems.findIndex(t => t.name === currentTier);
+        if (currentIdx >= 0) {
+            selector.selectedIndex = currentIdx;
+        }
+
+        let currentInput = initialFilter;
+        let maxRenderedLines = 0;
+
+        process.stdout.write(TERMINAL.HIDE_CURSOR);
+
+        const clearDisplay = () => {
+            if (maxRenderedLines === 0) return '';
+            let output = '';
+            for (let i = 0; i < maxRenderedLines; i++) {
+                output += `\n${TERMINAL.CLEAR_LINE}`;
+            }
+            for (let i = 0; i < maxRenderedLines; i++) {
+                output += TERMINAL.MOVE_UP;
+            }
+            output += `\r${TERMINAL.CLEAR_LINE}`;
+            return output;
+        };
+
+        const render = () => {
+            let output = clearDisplay();
+            output += `${prompt}${currentInput}`;
+
+            const cols = process.stdout.columns || 80;
+            output += `\n${colors.gray}${'─'.repeat(cols)}${colors.reset}`;
+
+            const lines = selector.render();
+            lines.forEach(line => {
+                output += `\n${TERMINAL.CLEAR_LINE}${line}`;
+            });
+
+            const totalLines = 1 + lines.length;
+            if (totalLines > maxRenderedLines) {
+                maxRenderedLines = totalLines;
+            }
+
+            for (let i = 0; i < totalLines; i++) {
+                output += TERMINAL.MOVE_UP;
+            }
+            output += `\r${TERMINAL.MOVE_TO_COL(visiblePromptLen + currentInput.length + 1)}`;
+
+            process.stdout.write(output);
+        };
+
+        const cleanup = () => {
+            process.stdout.write(clearDisplay() + TERMINAL.SHOW_CURSOR);
+            process.stdin.setRawMode(false);
+            process.stdin.removeListener('data', handleKey);
+        };
+
+        const handleKey = (key) => {
+            const keyStr = key.toString();
+
+            if (keyStr === '\x1b[A') { selector.moveUp(); render(); return; }
+            if (keyStr === '\x1b[B') { selector.moveDown(); render(); return; }
+
+            if (keyStr === '\r' || keyStr === '\n') {
+                const selected = selector.getSelected();
+                cleanup();
+                resolve(selected ? { name: selected.name } : null);
+                return;
+            }
+
+            if (keyStr === '\x1b' || keyStr === '\x03') { cleanup(); resolve(null); return; }
+
+            if (keyStr === '\x7f' || keyStr === '\b') {
+                if (currentInput.length > 0) {
+                    currentInput = currentInput.slice(0, -1);
+                    selector.updateFilter(currentInput);
+                    render();
+                } else {
+                    cleanup(); resolve(null);
+                }
+                return;
+            }
+
+            if (keyStr === '\t') {
+                const selected = selector.getSelected();
+                if (selected) { cleanup(); resolve({ name: selected.name }); }
+                return;
+            }
+
+            if (keyStr.length === 1 && keyStr >= ' ') {
+                currentInput += keyStr;
+                selector.updateFilter(currentInput);
+                render();
+            }
+        };
+
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', handleKey);
+
+        render();
+    });
+}
+
+/**
+ * Show an interactive model selector and return the selected model
+ *
+ * @param {Object} tiers - Tiers object from listTiersFromCache() { tierName: [model1, ...] }
+ * @param {Object} options - Options
+ * @param {Object} [options.theme] - Theme object (uses baseTheme if not provided)
+ * @returns {Promise<{name: string}|null>} - Selected model or null if cancelled
+ */
+export async function showModelSelector(tiers, options = {}) {
+    const theme = options.theme || baseTheme;
+    const colors = theme.colors;
+    const {
+        prompt = `${colors.cyan}${colors.bold}>${colors.reset} model: `,
+        initialFilter = '',
+        maxVisible = 12,
+    } = options;
+
+    if (!tiers || Object.keys(tiers).length === 0) {
+        return null;
+    }
+
+    // Flatten tiers into model items, deduplicating (show first tier only)
+    const seen = new Set();
+    const modelItems = [];
+    for (const [tierName, models] of Object.entries(tiers)) {
+        for (const model of models) {
+            if (!seen.has(model)) {
+                seen.add(model);
+                modelItems.push({
+                    name: model,
+                    description: `[${tierName}]`,
+                });
+            }
+        }
+    }
+
+    if (modelItems.length === 0) {
+        return null;
+    }
+
+    // Calculate visible prompt length for cursor positioning
+    const visiblePromptLen = 9; // "> model: " = 9 chars
+
+    return new Promise((resolve) => {
+        const selector = new CommandSelector(modelItems, { maxVisible, theme });
+        selector.updateFilter(initialFilter);
+
+        let currentInput = initialFilter;
+        let maxRenderedLines = 0;
+
+        process.stdout.write(TERMINAL.HIDE_CURSOR);
+
+        const clearDisplay = () => {
+            if (maxRenderedLines === 0) return '';
+            let output = '';
+            for (let i = 0; i < maxRenderedLines; i++) {
+                output += `\n${TERMINAL.CLEAR_LINE}`;
+            }
+            for (let i = 0; i < maxRenderedLines; i++) {
+                output += TERMINAL.MOVE_UP;
+            }
+            output += `\r${TERMINAL.CLEAR_LINE}`;
+            return output;
+        };
+
+        const render = () => {
+            let output = clearDisplay();
+            output += `${prompt}${currentInput}`;
+
+            const cols = process.stdout.columns || 80;
+            output += `\n${colors.gray}${'─'.repeat(cols)}${colors.reset}`;
+
+            const lines = selector.render();
+            lines.forEach(line => {
+                output += `\n${TERMINAL.CLEAR_LINE}${line}`;
+            });
+
+            const totalLines = 1 + lines.length;
+            if (totalLines > maxRenderedLines) {
+                maxRenderedLines = totalLines;
+            }
+
+            for (let i = 0; i < totalLines; i++) {
+                output += TERMINAL.MOVE_UP;
+            }
+            output += `\r${TERMINAL.MOVE_TO_COL(visiblePromptLen + currentInput.length + 1)}`;
+
+            process.stdout.write(output);
+        };
+
+        const cleanup = () => {
+            process.stdout.write(clearDisplay() + TERMINAL.SHOW_CURSOR);
+            process.stdin.setRawMode(false);
+            process.stdin.removeListener('data', handleKey);
+        };
+
+        const handleKey = (key) => {
+            const keyStr = key.toString();
+
+            if (keyStr === '\x1b[A') { selector.moveUp(); render(); return; }
+            if (keyStr === '\x1b[B') { selector.moveDown(); render(); return; }
+
+            if (keyStr === '\r' || keyStr === '\n') {
+                const selected = selector.getSelected();
+                cleanup();
+                resolve(selected ? { name: selected.name } : null);
+                return;
+            }
+
+            if (keyStr === '\x1b' || keyStr === '\x03') { cleanup(); resolve(null); return; }
+
+            if (keyStr === '\x7f' || keyStr === '\b') {
+                if (currentInput.length > 0) {
+                    currentInput = currentInput.slice(0, -1);
+                    selector.updateFilter(currentInput);
+                    render();
+                } else {
+                    cleanup(); resolve(null);
+                }
+                return;
+            }
+
+            if (keyStr === '\t') {
+                const selected = selector.getSelected();
+                if (selected) { cleanup(); resolve({ name: selected.name }); }
+                return;
+            }
+
+            if (keyStr.length === 1 && keyStr >= ' ') {
+                currentInput += keyStr;
+                selector.updateFilter(currentInput);
+                render();
+            }
+        };
+
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', handleKey);
+
+        render();
+    });
+}
+
 export default CommandSelector;

@@ -121,6 +121,8 @@ ${C.bold}${C.yellow}Slash Commands${C.reset} ${C.dim}(direct skill execution)${C
   ${C.cyan}/specs-write${C.reset} <skill>     Create/update .specs.md
   ${C.cyan}/exec${C.reset} <skill> [input]    Execute any skill
   ${C.cyan}/raw${C.reset}                     Toggle markdown rendering
+  ${C.cyan}/tier${C.reset} [name]             Show/switch LLM tier
+  ${C.cyan}/model${C.reset} [name|clear]      Pin a model or clear pin
   ${C.cyan}/help${C.reset} [topic]            Show help
 
 ${C.dim}Type /help <command> for detailed help on any command.${C.reset}
@@ -146,10 +148,10 @@ ${C.bold}${C.yellow}cskill${C.reset} - Code Skill
   ${C.green}Sections:${C.reset} Description, Input Format, Output Format, Constraints
   ${C.green}Use for:${C.reset} Complex business logic from natural language specs
 
-${C.bold}${C.yellow}cgskill${C.reset} - Code Generation Skill
+${C.bold}${C.yellow}dcgskill${C.reset} - Dynamic Code Generation Skill
   ${C.dim}LLM decides text/code at runtime or uses hand-written module.${C.reset}
-  ${C.green}File:${C.reset} cgskill.md (+ optional module)
-  ${C.green}Sections:${C.reset} Description, Prompt, Arguments, LLM Mode, Examples
+  ${C.green}File:${C.reset} dcgskill.md (+ optional module)
+  ${C.green}Sections:${C.reset} Summary, Prompt, Arguments, LLM Mode, Examples
   ${C.green}Use for:${C.reset} Utilities, agent API access, deterministic tools
 
 ${C.bold}${C.yellow}oskill${C.reset} - Orchestrator Skill
@@ -493,7 +495,7 @@ ${C.bold}${C.yellow}Description:${C.reset}
 
 ${C.bold}${C.yellow}Output:${C.reset}
   Each skill shows: [type] skill-name
-  Types: tskill, cskill, cgskill, oskill, mskill
+  Types: tskill, cskill, dcgskill, oskill, mskill, claude
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /ls
@@ -540,9 +542,10 @@ ${C.bold}${C.yellow}Usage:${C.reset}
 ${C.bold}${C.yellow}Skill Types:${C.reset}
   ${C.cyan}tskill${C.reset}  - Database table skill
   ${C.cyan}cskill${C.reset}  - Code skill (LLM generates from specs)
-  ${C.cyan}cgskill${C.reset} - Code generation skill (module or runtime LLM)
+  ${C.cyan}dcgskill${C.reset} - Dynamic code generation skill (module or runtime LLM)
   ${C.cyan}oskill${C.reset}  - Orchestrator skill
   ${C.cyan}mskill${C.reset}  - MCP tool skill
+  ${C.cyan}claude${C.reset} - Claude skill (LLM loop session with tools)
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /write inventory tskill    ${C.dim}Create new tskill${C.reset}
@@ -776,13 +779,14 @@ ${C.bold}${C.yellow}Usage:${C.reset}
 ${C.bold}${C.yellow}Types:${C.reset}
   ${C.cyan}tskill${C.reset}  - Database table skill template
   ${C.cyan}cskill${C.reset}  - Code skill template (spec-based)
-  ${C.cyan}cgskill${C.reset} - Code generation skill template
+  ${C.cyan}dcgskill${C.reset} - Dynamic code generation skill template
   ${C.cyan}oskill${C.reset}  - Orchestrator skill template
   ${C.cyan}mskill${C.reset}  - MCP skill template
+  ${C.cyan}claude${C.reset} - Claude skill template
 
 ${C.bold}${C.yellow}Examples:${C.reset}
   ${C.green}>${C.reset} /template tskill
-  ${C.green}>${C.reset} /template cgskill
+  ${C.green}>${C.reset} /template dcgskill
 
 ${C.bold}${C.yellow}Output:${C.reset}
   Displays the full template text that you can copy and customize.
@@ -855,6 +859,98 @@ ${C.bold}${C.yellow}Examples:${C.reset}
   ✗ area (2 passed, 1 failed)
 
   Total: 3 tests, 10 passed, 1 failed${C.reset}
+`,
+    },
+
+    scaffold: {
+        title: '/scaffold - Create Documentation Skill',
+        content: `
+${C.bold}${C.cyan}/scaffold - Create Documentation Skill${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/scaffold <doc-type> <skill-name>${C.reset}
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Creates a documentation skill with full directory structure including
+  SKILL.md, resources/, and scripts/ directories. Uses the Claude skill
+  type (loop session with tools like ask-user, read, write, bash, webfetch).
+
+${C.bold}${C.yellow}Available Doc Types:${C.reset}
+  ${C.green}doc-scientific${C.reset}       Scientific article (IEEE, APA, ACM)
+  ${C.green}doc-eu-deliverable${C.reset}  EU Horizon Europe project deliverable
+  ${C.green}doc-technical${C.reset}       Technical documentation (API docs, runbooks)
+  ${C.green}doc-book${C.reset}            Book/manual (non-fiction, textbooks)
+  ${C.green}doc-review${C.reset}          Interactive document reviewer
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /scaffold doc-scientific my-paper
+  ${C.dim}Creates skills/my-paper/ with SKILL.md + resources/ + scripts/${C.reset}
+
+  ${C.green}>${C.reset} /scaffold doc-review my-reviewer
+  ${C.dim}Creates a document review skill${C.reset}
+
+${C.dim}After scaffolding, use /exec <skill-name> to run the skill.${C.reset}
+`,
+    },
+
+    tier: {
+        title: '/tier - Switch LLM Tier',
+        content: `
+${C.bold}${C.cyan}/tier - Switch LLM Tier${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/tier${C.reset}              Show available tiers and current models
+  ${C.green}/tier <tier-name>${C.reset}  Switch to a specific tier
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Controls which LLM tier is used for skill execution. Tiers map to
+  different models with varying speed/capability trade-offs.
+
+${C.bold}${C.yellow}Common Tiers:${C.reset}
+  ${C.green}fast${C.reset}    Quick responses, lower cost (default in REPL)
+  ${C.green}deep${C.reset}    More capable, slower (default in single-shot)
+  ${C.green}plan${C.reset}    Optimized for planning tasks
+  ${C.green}write${C.reset}   Optimized for content generation
+  ${C.green}code${C.reset}    Optimized for code generation
+  ${C.green}ultra${C.reset}   Most capable tier
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /tier
+  ${C.dim}Shows all available tiers with their model assignments${C.reset}
+
+  ${C.green}>${C.reset} /tier deep
+  ${C.dim}Switches to deep tier for more capable responses${C.reset}
+
+${C.dim}Available tiers depend on Soul Gateway configuration.${C.reset}
+`,
+    },
+
+    model: {
+        title: '/model - Pin a Specific Model',
+        content: `
+${C.bold}${C.cyan}/model - Pin a Specific Model${C.reset}
+
+${C.bold}${C.yellow}Usage:${C.reset}
+  ${C.green}/model${C.reset}              Interactive model picker
+  ${C.green}/model <name>${C.reset}       Pin a specific model for this session
+  ${C.green}/model clear${C.reset}        Clear the pin, return to tier-based selection
+
+${C.bold}${C.yellow}Description:${C.reset}
+  Pins a specific model for all subsequent LLM calls in this session.
+  When a model is pinned, it bypasses the tier cascade and uses that
+  model directly. Switching tiers with /tier also clears the pin.
+
+${C.bold}${C.yellow}Examples:${C.reset}
+  ${C.green}>${C.reset} /model
+  ${C.dim}Shows interactive picker with all available models${C.reset}
+
+  ${C.green}>${C.reset} /model copilot-gpt-4.1
+  ${C.dim}Pins copilot-gpt-4.1 for all calls${C.reset}
+
+  ${C.green}>${C.reset} /model clear
+  ${C.dim}Clears the pin, goes back to tier-based selection${C.reset}
+
+${C.dim}Available models depend on Soul Gateway configuration.${C.reset}
 `,
     },
 
